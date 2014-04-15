@@ -84,7 +84,7 @@ class MSField():
         
         #Check whether current field is full
         if self.__field_closed__[x][y] != 'C' and self.__field_closed__[x][y] != 'F': 
-            if self.is_caim_full(x, y):
+            if self.caim_prop(x, y)[0] == self.__field_closed__[x][y]:
                 for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
                     x_next, y_next = x+caim[0], y+caim[1]
                     if x_next in range(self.__sizeN__) and y_next in range(self.__sizeM__):
@@ -121,14 +121,28 @@ class MSField():
         if self.__field_closed__[x][y] == 'C': self.__field_closed__[x][y] = 'F'
         elif self.__field_closed__[x][y] == 'F': self.__field_closed__[x][y] = 'C'
     
-    def is_caim_full(self, x, y):
-        counter = 0
+    def caim_prop(self, x, y):
+        mines = 0
+        frees = 0
         for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
             x_next, y_next = x+caim[0], y+caim[1]
             if x_next in range(self.__sizeN__) and y_next in range(self.__sizeM__):
-                if self.__field_closed__[x_next][y_next] == 'F': counter += 1
-        return counter == self.__field_closed__[x][y]         
-        
+                if self.__field_closed__[x_next][y_next] == 'F': mines += 1
+                if self.__field_closed__[x_next][y_next] == 'C': frees += 1
+        return (mines, frees)         
+
+class MSAI():
+    __field__ = MSField(0, 0, 0)
+    
+    def step1_mine(self):
+        logging.debug('Start mine brutforcing')
+        for i in range(self.__sizeN__):
+            for j in range(self.__sizeM__):
+                pass
+    
+    def __initUI__(self, field):
+        self.__field__ = field
+        pass        
 
 class MSScreen(QtGui.QMainWindow):
     __field__ = MSField(0, 0, 0)
