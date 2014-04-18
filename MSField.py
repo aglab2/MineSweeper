@@ -18,7 +18,7 @@ class MSField():
         self.sizeN = sizeN
         self.sizeM = sizeM
         self.__mines__ = mines
-        self.finit = 0
+        self.finit = -1
         self.__field_opened__ = [mine_field[self.sizeM*i:self.sizeM*(i+1)] for i in range(self.sizeN)] 
         self.field_closed = [['C']*(self.sizeM) for i in range(self.sizeN)] #all field are closed('C')
         
@@ -124,9 +124,15 @@ class MSField():
         return (mines, frees) 
 
     def kill_field(self):
+        counter = 0
         for x in range(self.sizeN):
             for y in range(self.sizeM):
+                if self.field_closed[x][y] == self.__field_opened__[x][y]: counter += 1
                 if self.field_closed[x][y] == 'C':
                     self.field_closed[x][y] = self.__field_opened__[x][y]
                 elif self.field_closed[x][y] == 'F' and self.__field_opened__[x][y] != 'M':
                     self.field_closed[x][y] = 'P'
+        return counter
+
+if __name__ == '__main__':
+    raise Exception("Can't be executed from main")

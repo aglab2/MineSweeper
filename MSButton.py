@@ -18,3 +18,6 @@ class MSButton(QtGui.QPushButton):
         elif event.button() == QtCore.Qt.RightButton:
             logging.debug('Right button pressed')
             self.leftClicked.emit()
+
+if __name__ == '__main__':
+    raise Exception("Can't be executed from main")
