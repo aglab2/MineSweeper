@@ -127,7 +127,7 @@ class MSField():
         counter = 0
         for x in range(self.sizeN):
             for y in range(self.sizeM):
-                if self.field_closed[x][y] == self.__field_opened__[x][y]: counter += 1
+                if self.field_closed[x][y] == self.__field_opened__[x][y] or (self.field_closed[x][y] == 'F' and self.__field_opened__[x][y] == 'M'): counter += 1
                 if self.field_closed[x][y] == 'C':
                     self.field_closed[x][y] = self.__field_opened__[x][y]
                 elif self.field_closed[x][y] == 'F' and self.__field_opened__[x][y] != 'M':

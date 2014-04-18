@@ -3,9 +3,11 @@ import sys
 import threading
 import time
 
-from MSField    import MSField
-from MSButton   import MSButton
-from MSBot      import MSBot
+from MSField      import MSField
+from MSButton     import MSButton
+from MSBot        import MSBot
+from MSScoreboard import MSScoreboard
+
 
 class MSScreen(QtGui.QMainWindow):
     __field__ = None
@@ -46,6 +48,11 @@ class MSScreen(QtGui.QMainWindow):
         botStep.triggered.connect(self.__bot_step__)
         self.__botstep__ = botStep
         
+        scoreAction = QtGui.QAction('Результаты', self)
+        scoreAction.setShortcut('Ctrl+R')
+        scoreAction.setStatusTip('Показать результаты')
+        scoreAction.triggered.connect(self.__load_scoreboard__)
+
         #Initiate menu
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('Меню')
@@ -56,6 +63,9 @@ class MSScreen(QtGui.QMainWindow):
         cheatMenu.addAction(botAction)
         cheatMenu.addAction(botStep)
         
+        helpMenu = menubar.addMenu('Помощь')
+        helpMenu.addAction(scoreAction)
+
         self.setWindowTitle('Minesweeper')
         self.setWindowIcon(QtGui.QIcon('M.png'))
     
@@ -95,11 +105,21 @@ class MSScreen(QtGui.QMainWindow):
             self.setNames() 
             self.__field__.finit = 1
             call_button.setStyleSheet("background-color: red")
+            
+            sb = MSScoreboard()
+            state = 0
+            if self.__field__.sizeM == 16: state = 1
+            if self.__field__.sizeM == 30: state = 2
+            sb.add_level(state, 0, percentage)
+            
             msgBox = QtGui.QMessageBox()
             msgBox.setWindowIcon(QtGui.QIcon('M.png'))
             msgBox.setWindowTitle('Minesweeper')
             msgBox.setText("Failed! You blew up in {} seconds. You have opened {}% of field".format(round(time.time() - self.__timer__,2), percentage))
-            msgBox.exec_()
+            msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Reset)  
+            ret = msgBox.exec_()
+            if (ret == QtGui.QMessageBox.Reset):
+                self.__new_field_create__(self.__field__.sizeN, self.__field__.sizeM, self.__field__.__mines__)
             return True
 
         #If user opened mine we have to terminate the game
@@ -136,13 +156,17 @@ class MSScreen(QtGui.QMainWindow):
         vbox.addStretch(1)
         groupBox.setLayout(vbox)
         msgBox_layout.addWidget(groupBox, 0, 0)
-        msgBox.exec_()
+        msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel)
+        ret = msgBox.exec_()
         
-        sizeN, sizeM, mines = 0, 0, 0
-        if radio1.isChecked(): sizeN, sizeM, mines = 8, 8, 10
-        if radio2.isChecked(): sizeN, sizeM, mines = 16, 16, 40
-        if radio3.isChecked(): sizeN, sizeM, mines = 16, 30, 99
-        
+        if (ret == QtGui.QMessageBox.Ok):
+            sizeN, sizeM, mines = 0, 0, 0
+            if radio1.isChecked(): sizeN, sizeM, mines = 8, 8, 10
+            if radio2.isChecked(): sizeN, sizeM, mines = 16, 16, 40
+            if radio3.isChecked(): sizeN, sizeM, mines = 16, 30, 99
+            self.__new_field_create__(sizeN, sizeM, mines)
+    
+    def __new_field_create__(self, sizeN, sizeM, mines):
         #Create a new field
         self.__field__ = MSField(sizeN, sizeM, mines)
         
@@ -216,11 +240,22 @@ class MSScreen(QtGui.QMainWindow):
             
         if self.__field__.is_solved() and self.__field__.finit != 2:
             self.__field__.finit = 1 
+            
+            sb = MSScoreboard()
+            state = 0
+            if self.__field__.sizeM == 16: state = 1
+            if self.__field__.sizeM == 30: state = 2
+            sb.add_level(state, 1, 100)
+            
             msgBox = QtGui.QMessageBox()
-            msgBox.setText("Congratulations! You have succeeded in {} seconds".format(round(time.time() - self.__timer__),2))
+            msgBox.setText("Congratulations! You have succeeded in {} seconds".format(round(time.time() - self.__timer__, 2)))
             msgBox.setWindowIcon(QtGui.QIcon('M.png'))
-            msgBox.setWindowTitle('Minesweeper')    
-            msgBox.exec_()
+            msgBox.setWindowTitle('Minesweeper')
+            msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Reset)  
+            ret = msgBox.exec_()
+            if (ret == QtGui.QMessageBox.Reset):
+                self.__new_field_create__(self.__field__.sizeN, self.__field__.sizeM, self.__field__.__mines__)
+                pass
             return True
         return False
     
@@ -232,6 +267,9 @@ class MSScreen(QtGui.QMainWindow):
                 self.__botstep__.triggered.emit()
         if self.__field__.finit <= 0: repeat()
         
+    def __load_scoreboard__(self):
+        sb = MSScoreboard()
+        sb.show_score()
 
 def initGame():
     app = QtGui.QApplication(sys.argv)

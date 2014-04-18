@@ -45,9 +45,16 @@ class MSBot():
 
         assist = [[0] * (field.sizeM) for y in range(field.sizeM)] #assist
         
+        counter = 0
+        free_cells = list()
+        
         console.append('Start r&a bruteforcing')
         for x in range(field.sizeN):
             for y in range(field.sizeM):
+                if field.field_closed[x][y] == 'C':
+                    counter += 1
+                    free_cells.append((x, y))
+                    
                 if type(field.field_closed[x][y]) != int or field.field_closed[x][y] == 0: continue
                 mines, frees = field.caim_prop(x, y)
                 if frees == 0: continue
@@ -56,7 +63,13 @@ class MSBot():
                     x_next, y_next = x+caim[0], y+caim[1]
                     if x_next in range(field.sizeN) and y_next in range(field.sizeM):
                         if (field.field_closed[x_next][y_next] == 'C'): assist[x_next][y_next] += probability
-            
+        
+        if 50 * counter < field.sizeM * field.sizeN:
+            console.append('    Override standart check!')
+            cell = random.choice(free_cells)
+            self.__screen__.__grid__.itemAtPosition(cell[0], cell[1]).widget().rightClicked.emit()
+            return True
+        
         max_probability = -1
         max_cells = list()
         
