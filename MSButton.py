@@ -10,7 +10,9 @@ class MSButton(QtGui.QPushButton):
         """Constructor"""
         #Init button with fixed size
         super(MSButton, self).__init__()
-        self.setFixedSize(35, 35)
+        rect = QtGui.QDesktopWidget().availableGeometry()
+        height = round(min(rect.width() *3/4 / 30, rect.height() *3/4 / 16))
+        self.setFixedSize(height, height)
         
     def mousePressEvent(self,event):
         """Handle presses"""

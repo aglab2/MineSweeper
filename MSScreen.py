@@ -1,4 +1,4 @@
-from PySide import QtGui
+from PySide import QtGui, QtCore
 import sys
 import threading
 import time
@@ -81,12 +81,18 @@ class MSScreen(QtGui.QMainWindow):
         
         for i in range(self.__field__.sizeN):
             for j in range(self.__field__.sizeM):
+                cur_button = self.__grid__.itemAtPosition(i, j).widget()
+                cur_geom = cur_button.geometry()
+                icon_size = QtCore.QSize(cur_geom.width()*3/4, cur_geom.height()*3/4)
+                
                 if self.__field__.field_closed[i][j] == 0: #if cell == 0 set no icon+gray color
-                    self.__grid__.itemAtPosition(i, j).widget().setIcon(QtGui.QIcon(str('')))
-                    self.__grid__.itemAtPosition(i, j).widget().setStyleSheet("background-color: gray")
+                    cur_button.setIcon(QtGui.QIcon(str('')))
+                    cur_button.setIconSize(icon_size)
+                    cur_button.setStyleSheet("background-color: gray")
                 else:            
-                    self.__grid__.itemAtPosition(i, j).widget().setIcon(QtGui.QIcon(str(self.__field__.field_closed[i][j])+'.png'))
-                    self.__grid__.itemAtPosition(i, j).widget().setStyleSheet("background-color: white")
+                    cur_button.setIcon(QtGui.QIcon(str(self.__field__.field_closed[i][j])+'.png'))
+                    cur_button.setIconSize(icon_size)
+                    cur_button.setStyleSheet("background-color: white")
 
    
     def __get_button_action__(self):
@@ -111,7 +117,7 @@ class MSScreen(QtGui.QMainWindow):
             self.setNames() 
             self.__field__.finit = 1
             call_button.setStyleSheet("background-color: red")
-            
+
             sb = MSScoreboard()
             state = 0
             if self.__field__.sizeM == 16: state = 1
@@ -192,6 +198,7 @@ class MSScreen(QtGui.QMainWindow):
         self.__val_mnf__ = QtGui.QLabel('Number of m&f: 0')
         self.__val_rna__ = QtGui.QLabel('Number of r&a: 0')
         self.__console__ = QtGui.QTextEdit()
+        self.__console__.setFixedWidth(QtGui.QDesktopWidget().availableGeometry().width() / 5)
         self.__autobot__ = QtGui.QPushButton('Auto-Bot')
         self.__autobot__.clicked.connect(self.__start_autobot__)
         
