@@ -3,9 +3,9 @@ import sys
 import threading
 import time
 
-from MSField      import MSField
-from MSButton     import MSButton
-from MSBot        import MSBot
+from MSField import MSField
+from MSButton import MSButton
+from MSBot import MSBot
 from MSScoreboard import MSScoreboard
 
 
