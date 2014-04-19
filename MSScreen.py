@@ -49,10 +49,10 @@ class MSScreen(QtGui.QMainWindow):
         botStep.triggered.connect(self.__bot_step__)
         self.__botstep__ = botStep
         
-        testBotAction = QtGui.QAction('Тест', self)        
-        testBotAction.setShortcut('Ctrl+T')
-        testBotAction.setStatusTip('Собрать статистику на выбранном уровне')
-        testBotAction.triggered.connect(self.__test_bot__)
+        #testBotAction = QtGui.QAction('Тест', self)        
+        #testBotAction.setShortcut('Ctrl+T')
+        #testBotAction.setStatusTip('Собрать статистику на выбранном уровне')
+        #testBotAction.triggered.connect(self.__test_bot__)
         
         scoreAction = QtGui.QAction('Результаты', self)
         scoreAction.setShortcut('Ctrl+R')
@@ -70,7 +70,7 @@ class MSScreen(QtGui.QMainWindow):
         
         helpMenu = menubar.addMenu('Помощь')
         helpMenu.addAction(scoreAction)
-        helpMenu.addAction(testBotAction)
+        #helpMenu.addAction(testBotAction)
 
         self.setWindowTitle('Minesweeper')
         self.setWindowIcon(QtGui.QIcon('M.png'))
