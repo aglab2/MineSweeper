@@ -10,6 +10,7 @@ class MSField():
     finit = 0
     
     def __init__(self, sizeN, sizeM, mines):
+        """Constructor of random field"""
         if mines > sizeN*sizeM:
             raise Exception('To many mines for this field size')
         #Initiate field and properties of fields
@@ -33,6 +34,7 @@ class MSField():
     
     #Debug print methods
     def print_opened(self):
+        """Debug print opened"""
         for i in range(self.sizeN):
             info_str = ''
             for j in range(self.sizeM):
@@ -41,6 +43,7 @@ class MSField():
         logging.info('')
 
     def print_closed(self):
+        """Debug print closed"""
         for i in range(self.sizeN):
             info_str = ''
             for j in range(self.sizeM):
@@ -49,8 +52,7 @@ class MSField():
         logging.info('')
             
     def is_solved(self):
-        #Check if field contain any closed numbers
-        
+        """Check if field contain any closed numbers"""
         for i in range(self.sizeN):
             for j in range(self.sizeM):
                 if self.field_closed[i][j] != self.__field_opened__[i][j] and self.__field_opened__[i][j] !='M':
@@ -58,6 +60,7 @@ class MSField():
         return True 
     
     def defuse_cell(self, x, y):
+        """Handles open cell activity"""
         logging.debug('Started with ({}, {})'.format(x, y))
         logging.debug('    closed: {}'.format(self.field_closed[x][y]))
         logging.debug('    opened: {}'.format(self.__field_opened__[x][y]))
@@ -73,19 +76,21 @@ class MSField():
             self.__open_cell__(x, y)
     
     def mine_cell(self, x, y):
+        """Caim method to set flags"""
         for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
             x_next, y_next = x+caim[0], y+caim[1]
             if x_next in range(self.sizeN) and y_next in range(self.sizeM):
                 if self.field_closed[x_next][y_next] != 'F': self.__open_cell__(x_next, y_next)
 
     def free_cell(self, x, y):
+        """Caim method to open cells"""
         for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
             x_next, y_next = x+caim[0], y+caim[1]
             if x_next in range(self.sizeN) and y_next in range(self.sizeM):
                 if self.field_closed[x_next][y_next] == 'C': self.field_closed[x_next][y_next] = 'F'
     
     def __open_cell__(self, x, y):
-        #Open number and if num=0 call dfs on field
+        """Open cell and if caim val=0 call dfs on field"""
         if self.__field_opened__[x][y] == 'M': self.finit = 2
         if self.__field_opened__[x][y] == 0:
             self.__cell_dfs__(x, y, set())
@@ -93,6 +98,7 @@ class MSField():
             self.field_closed[x][y] = self.__field_opened__[x][y]
     
     def __cell_dfs__(self, x, y, used):
+        """Caim dfs on cells with caim val = 0"""
         logging.info('Started with ({}, {})'.format(x, y))
         #Add cell to used if it is not already there
         if (x, y) in used: return 
@@ -107,6 +113,7 @@ class MSField():
                 self.__cell_dfs__(x_next, y_next, used)
         
     def mark_cell(self, x, y):
+        """Set flag"""
         logging.debug('Started with ({}, {})'.format(x, y))
         
         #Set flag or unset flag
@@ -114,6 +121,7 @@ class MSField():
         elif self.field_closed[x][y] == 'F': self.field_closed[x][y] = 'C'
     
     def caim_prop(self, x, y):
+        """Get properties (mines&frees) of cell caim"""
         mines = 0
         frees = 0
         for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
@@ -124,6 +132,7 @@ class MSField():
         return (mines, frees) 
 
     def kill_field(self):
+        """Just open all the mines on the field and check correctness of flags"""
         counter = 0
         for x in range(self.sizeN):
             for y in range(self.sizeM):

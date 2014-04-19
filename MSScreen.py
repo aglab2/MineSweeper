@@ -22,11 +22,12 @@ class MSScreen(QtGui.QMainWindow):
     __timer__ = 0
     
     def __init__(self):
+        """Constructor"""
         super(MSScreen, self).__init__()
         self.__initUI__()
         
     def __initUI__(self):
-        #Set start and finish actions
+        """Set menubar, name and icons"""
         exitAction = QtGui.QAction('Выход', self)
         exitAction.setShortcut('Ctrl+Q')
         exitAction.setStatusTip('Выйти из приложения')
@@ -58,7 +59,6 @@ class MSScreen(QtGui.QMainWindow):
         scoreAction.setStatusTip('Показать результаты')
         scoreAction.triggered.connect(self.__load_scoreboard__)
 
-        #Initiate menu
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('Меню')
         fileMenu.addAction(exitAction)
@@ -76,7 +76,7 @@ class MSScreen(QtGui.QMainWindow):
         self.setWindowIcon(QtGui.QIcon('M.png'))
     
     def setNames(self):
-        #Set new fieldf names if game is not finished already
+        """Set new field names if game is not finished already"""
         if (self.__game_finished__()): return 
         
         for i in range(self.__field__.sizeN):
@@ -90,7 +90,7 @@ class MSScreen(QtGui.QMainWindow):
 
    
     def __get_button_action__(self):
-        #Open cell action
+        """Open cell action"""
         if self.__field__.finit == 1: return
         call_button = self.sender()
         
@@ -127,13 +127,10 @@ class MSScreen(QtGui.QMainWindow):
             if (ret == QtGui.QMessageBox.Reset):
                 self.__new_field_create__(self.__field__.sizeN, self.__field__.sizeM, self.__field__.__mines__)
             return True
-
-        #If user opened mine we have to terminate the game
-
         self.setNames() 
     
     def __get_button_toggle__(self):
-        #Set flag action
+        """Set flag action"""
         if self.__field__.finit == 1: return
         call_button = self.sender()
         column, row = self.__grid__.getItemPosition(self.__grid__.indexOf(call_button))[0:2]
@@ -143,7 +140,7 @@ class MSScreen(QtGui.QMainWindow):
         self.setNames() 
     
     def __game_start__(self):
-        #Let user select difficulty level!
+        """Difficulty selection"""
         msgBox = QtGui.QMessageBox()
         msgBox.setWindowIcon(QtGui.QIcon('M.png'))
         msgBox.setWindowTitle('Minesweeper')
@@ -173,7 +170,7 @@ class MSScreen(QtGui.QMainWindow):
             self.__new_field_create__(sizeN, sizeM, mines)
     
     def __new_field_create__(self, sizeN, sizeM, mines):
-        #Create a new field
+        """Create a new field or replace the old one"""
         self.__field__ = MSField(sizeN, sizeM, mines)
         
         #Create central widget for this game and overwrite previous one
@@ -181,7 +178,6 @@ class MSScreen(QtGui.QMainWindow):
         self.setCentralWidget(centralWidget)
         
         #Create grid and add buttons
-        
         self.__grid__ = QtGui.QGridLayout()
         self.__grid__.setSpacing(0)
         
@@ -194,21 +190,18 @@ class MSScreen(QtGui.QMainWindow):
         
         vbox2 = QtGui.QVBoxLayout()
         self.__val_mnf__ = QtGui.QLabel('Number of m&f: 0')
-        #self.__val_fne__ = QtGui.QLabel('Number of f&e: 0')
         self.__val_rna__ = QtGui.QLabel('Number of r&a: 0')
         self.__console__ = QtGui.QTextEdit()
         self.__autobot__ = QtGui.QPushButton('Auto-Bot')
         self.__autobot__.clicked.connect(self.__start_autobot__)
         
         vbox2.addWidget(self.__val_mnf__)
-        #vbox2.addWidget(self.__val_fne__)
         vbox2.addWidget(self.__val_rna__)
         vbox2.addWidget(self.__console__)
         vbox2.addWidget(self.__autobot__)
         
         self.__console__.hide()
         self.__val_mnf__.hide()
-        #self.__val_fne__.hide()
         self.__val_rna__.hide()
         self.__autobot__.hide()
         #Starting all things
@@ -226,10 +219,10 @@ class MSScreen(QtGui.QMainWindow):
         self.__timer__ = time.time()
     
     def __bot_start__(self):
+        """Show all the components of bot and start the game"""
         self.__console__.show()
         self.__val_mnf__.show()
         self.__val_rna__.show()
-        #self.__val_fne__.show()
         self.__autobot__.show()
         
         self.__bot__ = MSBot(self)
@@ -237,11 +230,13 @@ class MSScreen(QtGui.QMainWindow):
         self.setFixedSize(self.sizeHint())
 
     def __bot_step__(self):
+        """Try all available methods of bruteforcing"""
         if self.__bot__.step1_mnf(): return
         if self.__bot__.step2_rna(): return
         if self.__bot__.step3_start(): return
 
     def __game_finished__(self):
+        """Check if game finished and finish game if field is solved"""
         if self.__field__.finit == 1: return True
             
         if self.__field__.is_solved() and self.__field__.finit != 2:
@@ -266,6 +261,7 @@ class MSScreen(QtGui.QMainWindow):
         return False
     
     def __start_autobot__(self, period=0.5):
+        """In period start botstep"""
         def repeat():
             if self.__field__.finit <= 0:
                 threading.Timer(period, repeat).start()
@@ -273,15 +269,18 @@ class MSScreen(QtGui.QMainWindow):
         if self.__field__.finit <= 0: repeat()
         
     def __load_scoreboard__(self):
+        """Show the scoreboard"""
         sb = MSScoreboard()
         sb.show_score()
     
     def __test_bot__(self):
+        """WIP"""
         self.__game_start__()
         self.__bot_start__()
         #self.__start_autobot__(0.5)
 
 def initGame():
+    """Function to start the game"""
     app = QtGui.QApplication(sys.argv)
     scr = MSScreen()    
     scr.show()

@@ -6,11 +6,17 @@ class MSBot():
     __rna__ = 0
 
     def __init__(self, screen):
+        """Constructor"""
         self.__screen__  = screen
         self.__mnf__ = 0
         self.__rna__ = 0
     
     def step1_mnf(self):
+        """Mines and frees bruteforce
+        Check if around cell is enough mines
+        If mines = M open all cells around this one
+        If mines+frees = M all cells around this are mines
+        Is bulletproof bruteforce if opened cells are correct"""
         field = self.__screen__.__field__
         console = self.__screen__.__console__
         val_mnf = self.__screen__.__val_mnf__
@@ -39,11 +45,15 @@ class MSBot():
         return False
     
     def step2_rna(self):
+        """Random and assist bruteforce
+        Count probability of mine in every cell and set mine or flag depending on assist
+        Isn't bulletproof bruteforce!
+        """
         field = self.__screen__.__field__
         console = self.__screen__.__console__
         val_rna = self.__screen__.__val_rna__
 
-        assist = [[0] * (field.sizeM) for y in range(field.sizeM)] #assist
+        assist = [[0] * (field.sizeM) for y in range(field.sizeM)]
         
         counter = 0
         free_cells = list()
@@ -136,6 +146,7 @@ class MSBot():
         return True
     
     def step3_start(self):
+        """Just open random cell at the beginning or if bug appears"""
         console = self.__screen__.__console__
         console.append('Start field')
         field = self.__screen__.__field__

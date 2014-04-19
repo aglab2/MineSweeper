@@ -8,6 +8,7 @@ class MSScoreboard():
     __count__ = [0, 0, 0]
     
     def __init__(self):
+        """Constructor with loader of scoreboard"""
         try:
             with open('scoreboard', 'r') as f:
                 self.__win__[0] = int(f.readline())
@@ -33,6 +34,7 @@ class MSScoreboard():
         except Exception: pass      
 
     def __write_score__(self):
+        """Write scoreboard to file"""
         try:
             with open('scoreboard', 'w') as f:
                 f.write(str(self.__win__[0]) + '\n')
@@ -58,6 +60,7 @@ class MSScoreboard():
 
         
     def add_level(self, diff, state, per):
+        """Recount new data"""
         if state == 0:
             self.__fail__[diff] += 1
         else:
@@ -68,6 +71,7 @@ class MSScoreboard():
         self.__write_score__()
 
     def show_score(self):
+        """Just show the scoreboard"""
         msgBox = QtGui.QMessageBox()
         msgBox.setText(
 """Scoreboard:

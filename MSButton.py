@@ -7,11 +7,13 @@ class MSButton(QtGui.QPushButton):
     leftClicked = QtCore.Signal()
     
     def __init__(self):
+        """Constructor"""
         #Init button with fixed size
         super(MSButton, self).__init__()
         self.setFixedSize(35, 35)
         
     def mousePressEvent(self,event):
+        """Handle presses"""
         if   event.button() == QtCore.Qt.LeftButton:
             logging.debug('Left button pressed')
             self.rightClicked.emit()
