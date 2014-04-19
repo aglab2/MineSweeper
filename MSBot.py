@@ -64,7 +64,7 @@ class MSBot():
                     if x_next in range(field.sizeN) and y_next in range(field.sizeM):
                         if (field.field_closed[x_next][y_next] == 'C'): assist[x_next][y_next] += probability
         
-        if 50 * counter < field.sizeM * field.sizeN:
+        if counter <= 10:
             console.append('    Override standart check!')
             cell = random.choice(free_cells)
             self.__screen__.__grid__.itemAtPosition(cell[0], cell[1]).widget().rightClicked.emit()

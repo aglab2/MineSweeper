@@ -48,6 +48,11 @@ class MSScreen(QtGui.QMainWindow):
         botStep.triggered.connect(self.__bot_step__)
         self.__botstep__ = botStep
         
+        testBotAction = QtGui.QAction('Тест', self)        
+        testBotAction.setShortcut('Ctrl+T')
+        testBotAction.setStatusTip('Собрать статистику на выбранном уровне')
+        testBotAction.triggered.connect(self.__test_bot__)
+        
         scoreAction = QtGui.QAction('Результаты', self)
         scoreAction.setShortcut('Ctrl+R')
         scoreAction.setStatusTip('Показать результаты')
@@ -65,6 +70,7 @@ class MSScreen(QtGui.QMainWindow):
         
         helpMenu = menubar.addMenu('Помощь')
         helpMenu.addAction(scoreAction)
+        helpMenu.addAction(testBotAction)
 
         self.setWindowTitle('Minesweeper')
         self.setWindowIcon(QtGui.QIcon('M.png'))
@@ -259,8 +265,7 @@ class MSScreen(QtGui.QMainWindow):
             return True
         return False
     
-    def __start_autobot__(self):
-        period = 0.5
+    def __start_autobot__(self, period=0.5):
         def repeat():
             if self.__field__.finit <= 0:
                 threading.Timer(period, repeat).start()
@@ -270,6 +275,11 @@ class MSScreen(QtGui.QMainWindow):
     def __load_scoreboard__(self):
         sb = MSScoreboard()
         sb.show_score()
+    
+    def __test_bot__(self):
+        self.__game_start__()
+        self.__bot_start__()
+        #self.__start_autobot__(0.5)
 
 def initGame():
     app = QtGui.QApplication(sys.argv)
