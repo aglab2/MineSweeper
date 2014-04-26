@@ -1,26 +1,13 @@
 from PySide import QtGui, QtCore
 import sys
-import threading
 import time
-
+import threading
 from MSField import MSField
 from MSButton import MSButton
 from MSBot import MSBot
 from MSScoreboard import MSScoreboard
 
-
-class MSScreen(QtGui.QMainWindow):
-    __field__ = None
-    __bot__ = None
-    __grid__ = None
-    __console__ = None
-    __val_mnf__ = None
-    __val_rna__ = None
-    __val_fne__ = None
-    __autobot__ = None
-    __botstep__ = None
-    __timer__ = 0
-    
+class MSScreen(QtGui.QMainWindow):  
     def __init__(self):
         """Constructor"""
         super(MSScreen, self).__init__()
@@ -75,24 +62,26 @@ class MSScreen(QtGui.QMainWindow):
         self.setWindowTitle('Minesweeper')
         self.setWindowIcon(QtGui.QIcon('M.png'))
     
-    def setNames(self):
+    def setNames(self, i, j, val):
+        if (self.__game_finished__()): return 
+
         """Set new field names if game is not finished already"""
         if (self.__game_finished__()): return 
         
-        for i in range(self.__field__.sizeN):
-            for j in range(self.__field__.sizeM):
-                cur_button = self.__grid__.itemAtPosition(i, j).widget()
-                cur_geom = cur_button.geometry()
-                icon_size = QtCore.QSize(cur_geom.width()*3/4, cur_geom.height()*3/4)
+        #for i in range(self.__field__.sizeN):
+            #for j in range(self.__field__.sizeM):
+        cur_button = self.__grid__.itemAtPosition(i, j).widget()
+        cur_geom = cur_button.geometry()
+        icon_size = QtCore.QSize(cur_geom.width()*3/4, cur_geom.height()*3/4)
                 
-                if self.__field__.field_closed[i][j] == 0: #if cell == 0 set no icon+gray color
-                    cur_button.setIcon(QtGui.QIcon(str('')))
-                    cur_button.setIconSize(icon_size)
-                    cur_button.setStyleSheet("background-color: gray")
-                else:            
-                    cur_button.setIcon(QtGui.QIcon(str(self.__field__.field_closed[i][j])+'.png'))
-                    cur_button.setIconSize(icon_size)
-                    cur_button.setStyleSheet("background-color: white")
+        if self.__field__.field_closed[i][j] == 0: #if cell == 0 set no icon+gray color
+            cur_button.setIcon(QtGui.QIcon(str('')))
+            cur_button.setIconSize(icon_size)
+            cur_button.setStyleSheet("background-color: gray")
+        else:            
+            cur_button.setIcon(QtGui.QIcon(str(self.__field__.field_closed[i][j])+'.png'))
+            cur_button.setIconSize(icon_size)
+            cur_button.setStyleSheet("background-color: white")
 
    
     def __get_button_action__(self):
@@ -107,14 +96,13 @@ class MSScreen(QtGui.QMainWindow):
             sizeM = self.__field__.sizeM
             mines = self.__field__.__mines__
             while self.__field__.__field_opened__[column][row] != 0:
-                self.__field__ = MSField(sizeN, sizeM, mines)
+                self.__field__ = MSField(sizeN, sizeM, mines, self)
         self.__field__.finit = 0
         
         self.__field__.defuse_cell(column, row)
         
         if self.__field__.finit == 2:
             percentage = round(self.__field__.kill_field()/self.__field__.sizeM/self.__field__.sizeN*100)
-            self.setNames() 
             self.__field__.finit = 1
             call_button.setStyleSheet("background-color: red")
 
@@ -132,21 +120,18 @@ class MSScreen(QtGui.QMainWindow):
             ret = msgBox.exec_()
             if (ret == QtGui.QMessageBox.Reset):
                 self.__new_field_create__(self.__field__.sizeN, self.__field__.sizeM, self.__field__.__mines__)
-            return True
-        self.setNames() 
+            return True 
     
     def __get_button_toggle__(self):
         """Set flag action"""
         if self.__field__.finit == 1: return
         call_button = self.sender()
         column, row = self.__grid__.getItemPosition(self.__grid__.indexOf(call_button))[0:2]
-        
-        
         self.__field__.mark_cell(column, row)
-        self.setNames() 
     
     def __game_start__(self):
         """Difficulty selection"""
+        self.__botstate__ = 0
         msgBox = QtGui.QMessageBox()
         msgBox.setWindowIcon(QtGui.QIcon('M.png'))
         msgBox.setWindowTitle('Minesweeper')
@@ -177,7 +162,7 @@ class MSScreen(QtGui.QMainWindow):
     
     def __new_field_create__(self, sizeN, sizeM, mines):
         """Create a new field or replace the old one"""
-        self.__field__ = MSField(sizeN, sizeM, mines)
+        self.__field__ = MSField(sizeN, sizeM, mines, self)
         
         #Create central widget for this game and overwrite previous one
         centralWidget = QtGui.QWidget()
@@ -193,22 +178,29 @@ class MSScreen(QtGui.QMainWindow):
                 button.rightClicked.connect(self.__get_button_action__)
                 button.leftClicked.connect(self.__get_button_toggle__)
                 self.__grid__.addWidget(button, i, j)
+                self.setNames(i, j, 'C')
         
         vbox2 = QtGui.QVBoxLayout()
         self.__val_mnf__ = QtGui.QLabel('Number of m&f: 0')
+        self.__val_tnc_bp__ = QtGui.QLabel('Number of t&c bp: 0')
+        self.__val_tnc_rd__ = QtGui.QLabel('Number of t&c rd: 0')
         self.__val_rna__ = QtGui.QLabel('Number of r&a: 0')
-        self.__console__ = QtGui.QTextEdit()
+        self.__console__ = QtGui.QPlainTextEdit()
         self.__console__.setFixedWidth(QtGui.QDesktopWidget().availableGeometry().width() / 5)
         self.__autobot__ = QtGui.QPushButton('Auto-Bot')
         self.__autobot__.clicked.connect(self.__start_autobot__)
         
         vbox2.addWidget(self.__val_mnf__)
+        vbox2.addWidget(self.__val_tnc_bp__)
+        vbox2.addWidget(self.__val_tnc_rd__)
         vbox2.addWidget(self.__val_rna__)
         vbox2.addWidget(self.__console__)
         vbox2.addWidget(self.__autobot__)
         
         self.__console__.hide()
         self.__val_mnf__.hide()
+        self.__val_tnc_bp__.hide()
+        self.__val_tnc_rd__.hide()
         self.__val_rna__.hide()
         self.__autobot__.hide()
         #Starting all things
@@ -221,26 +213,42 @@ class MSScreen(QtGui.QMainWindow):
         
         centralWidget.setFixedSize(centralWidget.sizeHint())
         self.setFixedSize(self.sizeHint()+centralWidget.sizeHint())
-        self.setNames() 
-        self.__field__.print_opened()
+        self.__field__.print_opened()        
         self.__timer__ = time.time()
     
     def __bot_start__(self):
         """Show all the components of bot and start the game"""
         self.__console__.show()
         self.__val_mnf__.show()
+        self.__val_tnc_bp__.show()
+        self.__val_tnc_rd__.show()
+        self.__val_mnf__.show()
         self.__val_rna__.show()
         self.__autobot__.show()
+        
+        self.__bot_work__ = False
         
         self.__bot__ = MSBot(self)
         self.centralWidget().setFixedSize(self.centralWidget().sizeHint())
         self.setFixedSize(self.sizeHint())
+        self.__bot_thread__ = MSBot(self, self)
+        
+        self.__mnf__ = 0
+        self.__tnc_bp__ = 0
+        self.__tnc_rd__ = 0
+        self.__rna__ = 0
+        
+        self.__botstate__ = 0
 
     def __bot_step__(self):
-        """Try all available methods of bruteforcing"""
-        if self.__bot__.step1_mnf(): return
-        if self.__bot__.step2_rna(): return
-        if self.__bot__.step3_start(): return
+        """Start bot thread"""
+        if not self.__bot_thread__.isAlive():
+            self.__bot_thread__ = MSBot(self, self)
+            self.__bot_thread__.__connectors__.console_signal.connect(self.console_append, QtCore.Qt.QueuedConnection)
+            self.__bot_thread__.__connectors__.button_signal.connect(self.button_style, QtCore.Qt.QueuedConnection)
+            #QtCore.QObject.connect(self.__bot_thread__, QtCore.SIGNAL("console_append(str)"), self, QtCore.SLOT("__console_append__(str)"), QtCore.Qt.QueuedConnection)
+            #QtCore.QObject.connect(self.__bot_thread__, QtCore.SIGNAL("button_style(int, int, str)"), self, QtCore.SLOT("__button_style__(int, int, str)"), QtCore.Qt.QueuedConnection)
+            self.__bot_thread__.start()
 
     def __game_finished__(self):
         """Check if game finished and finish game if field is solved"""
@@ -267,14 +275,30 @@ class MSScreen(QtGui.QMainWindow):
             return True
         return False
     
-    def __start_autobot__(self, period=0.5):
+    def __start_autobot__(self, period=0.1):
         """In period start botstep"""
+        if self.__botstate__ == 1: 
+            self.__botstate__ = 0
+        else:
+            self.__botstate__ = 1
+
         def repeat():
-            if self.__field__.finit <= 0:
+            if self.__field__.finit <= 0 and self.__botstate__ == 1:
+                if not self.__bot_thread__.isAlive(): 
+                    self.__botstep__.triggered.emit()
                 threading.Timer(period, repeat).start()
-                self.__botstep__.triggered.emit()
-        if self.__field__.finit <= 0: repeat()
-        
+                    
+        if self.__field__.finit <= 0: threading.Timer(period, repeat).start()
+    
+    #@QtCore.Slot(str)
+    def console_append(self, string):
+        self.__console__.appendPlainText(string)
+    
+    #@QtCore.Slot(int, int, str)
+    def button_style(self, x, y, string):
+        print(string)
+        self.__grid__.itemAtPosition(x, y).widget().setStyleSheet(string)
+    
     def __load_scoreboard__(self):
         """Show the scoreboard"""
         sb = MSScoreboard()
@@ -285,7 +309,7 @@ class MSScreen(QtGui.QMainWindow):
         self.__game_start__()
         self.__bot_start__()
         #self.__start_autobot__(0.5)
-
+        
 def initGame():
     """Function to start the game"""
     app = QtGui.QApplication(sys.argv)

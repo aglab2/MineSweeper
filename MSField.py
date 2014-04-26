@@ -8,8 +8,9 @@ class MSField():
     sizeM = 0
     __mines__ = 0
     finit = 0
+    __screen__ = None
     
-    def __init__(self, sizeN, sizeM, mines):
+    def __init__(self, sizeN, sizeM, mines, screen):
         """Constructor of random field"""
         if mines > sizeN*sizeM:
             raise Exception('To many mines for this field size')
@@ -22,7 +23,8 @@ class MSField():
         self.finit = -1
         self.__field_opened__ = [mine_field[self.sizeM*i:self.sizeM*(i+1)] for i in range(self.sizeN)] 
         self.field_closed = [['C']*(self.sizeM) for i in range(self.sizeN)] #all field are closed('C')
-        
+        self.__screen__ = screen
+
         #Count number of mines
         for x in range(self.sizeN):
             for y in range(self.sizeM):
@@ -87,15 +89,18 @@ class MSField():
         for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
             x_next, y_next = x+caim[0], y+caim[1]
             if x_next in range(self.sizeN) and y_next in range(self.sizeM):
-                if self.field_closed[x_next][y_next] == 'C': self.field_closed[x_next][y_next] = 'F'
+                if self.field_closed[x_next][y_next] == 'C': 
+                    self.field_closed[x_next][y_next] = 'F'
+                    self.__screen__.setNames(x_next, y_next, 'F')
     
     def __open_cell__(self, x, y):
-        """Open cell and if caim val=0 call dfs on field"""
+        """Open cell and if caim val=0 call dfs on field"""        
         if self.__field_opened__[x][y] == 'M': self.finit = 2
         if self.__field_opened__[x][y] == 0:
             self.__cell_dfs__(x, y, set())
         else:
             self.field_closed[x][y] = self.__field_opened__[x][y]
+            self.__screen__.setNames(x, y, self.__field_opened__[x][y])
     
     def __cell_dfs__(self, x, y, used):
         """Caim dfs on cells with caim val = 0"""
@@ -105,6 +110,7 @@ class MSField():
         used.add((x, y))
         #Open cell and call dfs from surrounding fields
         self.field_closed[x][y] = self.__field_opened__[x][y]
+        self.__screen__.setNames(x, y, self.__field_opened__[x][y])
 
         if self.field_closed[x][y] != 0: return 
         for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
@@ -117,8 +123,12 @@ class MSField():
         logging.debug('Started with ({}, {})'.format(x, y))
         
         #Set flag or unset flag
-        if self.field_closed[x][y] == 'C': self.field_closed[x][y] = 'F'
-        elif self.field_closed[x][y] == 'F': self.field_closed[x][y] = 'C'
+        if self.field_closed[x][y] == 'C': 
+            self.field_closed[x][y] = 'F'
+            self.__screen__.setNames(x, y, 'F')
+        elif self.field_closed[x][y] == 'F': 
+            self.field_closed[x][y] = 'C'
+            self.__screen__.setNames(x, y, 'C')
     
     def caim_prop(self, x, y):
         """Get properties (mines&frees) of cell caim"""
@@ -137,12 +147,12 @@ class MSField():
         for x in range(self.sizeN):
             for y in range(self.sizeM):
                 if self.field_closed[x][y] == self.__field_opened__[x][y] or (self.field_closed[x][y] == 'F' and self.__field_opened__[x][y] == 'M'): counter += 1
-                #if self.field_closed[x][y] == 'C':
-                #    self.field_closed[x][y] = self.__field_opened__[x][y]
                 if self.field_closed[x][y] == 'C' and self.__field_opened__[x][y] == 'M':
                     self.field_closed[x][y] = 'M'
+                    self.__screen__.setNames(x, y, 'M')
                 if self.field_closed[x][y] == 'F' and self.__field_opened__[x][y] != 'M':
                     self.field_closed[x][y] = 'P'
+                    self.__screen__.setNames(x, y, 'P')
         return counter
 
 if __name__ == '__main__':
