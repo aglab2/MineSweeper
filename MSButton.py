@@ -14,7 +14,7 @@ class MSButton(QtGui.QPushButton):
         height = round(min(rect.width() *3/4 / 30, rect.height() *3/4 / 16))
         self.setFixedSize(height, height)
         
-    def mousePressEvent(self,event):
+    def mousePressEvent(self, event):
         """Handle presses"""
         if   event.button() == QtCore.Qt.LeftButton:
             logging.debug('Left button pressed')

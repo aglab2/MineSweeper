@@ -32,8 +32,8 @@ class MSBot(Thread):
         #self.emit(QtCore.SIGNAL("console_append(str)"), 'Start m&f bruteforcing')
         self.__connectors__.console_signal.emit('Start m&f bruteforcing')
 
-        for x in range(field.sizeN):
-            for y in range(field.sizeM):
+        for x in range(field.sizen):
+            for y in range(field.sizem):
                 if field.field_closed[x][y] == 0: continue
                 mines, frees = field.caim_prop(x, y)
                 if frees == 0: continue
@@ -68,13 +68,13 @@ class MSBot(Thread):
 
         self.__connectors__.console_signal.emit('Start t&c bruteforce!')
 
-        for x in range(field.sizeN):
-            for y in range(field.sizeM):
+        for x in range(field.sizen):
+            for y in range(field.sizem):
                 is_frees = False
                 is_nums = False
                 for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
                     x_next, y_next = x+caim[0], y+caim[1]
-                    if x_next in range(field.sizeN) and y_next in range(field.sizeM):
+                    if x_next in range(field.sizen) and y_next in range(field.sizem):
                         if field.field_closed[x_next][y_next] == 'C':
                             is_frees = True
                         if type(field.field_closed[x_next][y_next]) == int and field.field_closed[x_next][y_next] > 0:
@@ -99,14 +99,14 @@ class MSBot(Thread):
                     in_seg = False
                     for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
                         x_next, y_next = num[0]+caim[0], num[1]+caim[1]
-                        if x_next in range(field.sizeN) and y_next in range(field.sizeM):
+                        if x_next in range(field.sizen) and y_next in range(field.sizem):
                             if (x_next, y_next) in cur_frees:
                                 in_seg = True
                     
                     if in_seg == True:
                         for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
                             x_next, y_next = num[0]+caim[0], num[1]+caim[1]
-                            if x_next in range(field.sizeN) and y_next in range(field.sizeM):
+                            if x_next in range(field.sizen) and y_next in range(field.sizem):
                                 if (x_next, y_next) in caim_frees:
                                     cur_frees.append((x_next, y_next))
                                     caim_frees.remove((x_next, y_next))
@@ -118,14 +118,14 @@ class MSBot(Thread):
         
         for cur_list in free_seg_list:
             #print(len(cur_list))
-            if (len(cur_list) > 12): continue 
+            if (len(cur_list) > 10): continue 
             
             tank_field = copy.copy(field)
             cur_nums = list()
             for num in caim_nums:
                 for caim in [(1,0), (0,1), (0,-1), (-1,0)]:
                     x_next, y_next = num[0]+caim[0], num[1]+caim[1]
-                    if x_next in range(tank_field.sizeN) and y_next in range(tank_field.sizeM):
+                    if x_next in range(tank_field.sizen) and y_next in range(tank_field.sizem):
                         if (x_next, y_next) in cur_list: 
                             cur_nums.append(num)
                             break
@@ -252,15 +252,15 @@ class MSBot(Thread):
         #console = self.__screen__.__console__
         #val_rna = self.__screen__.__val_rna__
 
-        assist = [[0] * (field.sizeM) for y in range(field.sizeM)]
+        assist = [[0] * (field.sizem) for y in range(field.sizem)]
         
         counter = 0
         free_cells = list()
         
         self.__connectors__.console_signal.emit('Start r&a bruteforce!')
         #console.append('Start r&a bruteforcing')
-        for x in range(field.sizeN):
-            for y in range(field.sizeM):
+        for x in range(field.sizen):
+            for y in range(field.sizem):
                 if field.field_closed[x][y] == 'C':
                     counter += 1
                     free_cells.append((x, y))
@@ -271,7 +271,7 @@ class MSBot(Thread):
                 probability = (field.field_closed[x][y] - mines) / frees * 840
                 for caim in [(1,1), (1,0), (1,-1), (0,1), (0,-1), (-1,1), (-1,0), (-1,-1)]:
                     x_next, y_next = x+caim[0], y+caim[1]
-                    if x_next in range(field.sizeN) and y_next in range(field.sizeM):
+                    if x_next in range(field.sizen) and y_next in range(field.sizem):
                         if (field.field_closed[x_next][y_next] == 'C'): assist[x_next][y_next] += probability
         
         if counter <= 10:
@@ -286,8 +286,8 @@ class MSBot(Thread):
         min_probability = 200000
         min_cells = list()
         
-        for x in range(field.sizeN):
-            for y in range(field.sizeM):
+        for x in range(field.sizen):
+            for y in range(field.sizem):
                 if field.field_closed[x][y] != 'C': continue
                 if assist[x][y] == 0: continue
                 
@@ -356,7 +356,7 @@ class MSBot(Thread):
         #console.append('Start field')
         self.__connectors__.console_signal.emit('Start field!')
         field = self.__screen__.__field__
-        self.__screen__.__grid__.itemAtPosition(round(field.sizeN/2), round(field.sizeM/2)).widget().rightClicked.emit()
+        self.__screen__.__grid__.itemAtPosition(round(field.sizen/2), round(field.sizem/2)).widget().rightClicked.emit()
         return True
 
 if __name__ == '__main__':

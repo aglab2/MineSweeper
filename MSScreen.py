@@ -15,24 +15,24 @@ class MSScreen(QtGui.QMainWindow):
         
     def __initUI__(self):
         """Set menubar, name and icons"""
-        exitAction = QtGui.QAction('Выход', self)
+        exitAction = QtGui.QAction('Quit', self)
         exitAction.setShortcut('Ctrl+Q')
-        exitAction.setStatusTip('Выйти из приложения')
+        exitAction.setStatusTip('Exit the application')
         exitAction.triggered.connect(self.close)
         
-        startAction = QtGui.QAction('Начать', self)
+        startAction = QtGui.QAction('Begin', self)
         startAction.setShortcut('Ctrl+N')
-        startAction.setStatusTip('Начать приложение')
+        startAction.setStatusTip('Begin the application')
         startAction.triggered.connect(self.__game_start__)
         
-        botAction = QtGui.QAction('Бот', self)
+        botAction = QtGui.QAction('Bot', self)
         botAction.setShortcut('Ctrl+B')
-        botAction.setStatusTip('Запустить бота')
+        botAction.setStatusTip('Turn on the bot')
         botAction.triggered.connect(self.__bot_start__)
         
-        botStep = QtGui.QAction('Шаг', self)
+        botStep = QtGui.QAction('Step', self)
         botStep.setShortcut('Ctrl+S')
-        botStep.setStatusTip('Сделать следующий шаг бота')
+        botStep.setStatusTip('Make next bot step')
         botStep.triggered.connect(self.__bot_step__)
         self.__botstep__ = botStep
         
@@ -41,21 +41,21 @@ class MSScreen(QtGui.QMainWindow):
         #testBotAction.setStatusTip('Собрать статистику на выбранном уровне')
         #testBotAction.triggered.connect(self.__test_bot__)
         
-        scoreAction = QtGui.QAction('Результаты', self)
+        scoreAction = QtGui.QAction('Results', self)
         scoreAction.setShortcut('Ctrl+R')
-        scoreAction.setStatusTip('Показать результаты')
+        scoreAction.setStatusTip('Show results')
         scoreAction.triggered.connect(self.__load_scoreboard__)
 
         menubar = self.menuBar()
-        fileMenu = menubar.addMenu('Меню')
+        fileMenu = menubar.addMenu('Menu')
         fileMenu.addAction(exitAction)
         fileMenu.addAction(startAction)
         
-        cheatMenu = menubar.addMenu('Читы')
+        cheatMenu = menubar.addMenu('Cheats')
         cheatMenu.addAction(botAction)
         cheatMenu.addAction(botStep)
         
-        helpMenu = menubar.addMenu('Помощь')
+        helpMenu = menubar.addMenu('Help')
         helpMenu.addAction(scoreAction)
         #helpMenu.addAction(testBotAction)
 
@@ -68,8 +68,8 @@ class MSScreen(QtGui.QMainWindow):
         """Set new field names if game is not finished already"""
         if (self.__game_finished__()): return 
         
-        #for i in range(self.__field__.sizeN):
-            #for j in range(self.__field__.sizeM):
+        #for i in range(self.__field__.sizen):
+            #for j in range(self.__field__.sizem):
         cur_button = self.__grid__.itemAtPosition(i, j).widget()
         cur_geom = cur_button.geometry()
         icon_size = QtCore.QSize(cur_geom.width()*3/4, cur_geom.height()*3/4)
@@ -92,24 +92,24 @@ class MSScreen(QtGui.QMainWindow):
         column, row = self.__grid__.getItemPosition(self.__grid__.indexOf(call_button))[0:2]
         
         if self.__field__.__field_opened__[column][row] != 0 and self.__field__.finit == -1:
-            sizeN = self.__field__.sizeN
-            sizeM = self.__field__.sizeM
+            sizen = self.__field__.sizen
+            sizem = self.__field__.sizem
             mines = self.__field__.__mines__
             while self.__field__.__field_opened__[column][row] != 0:
-                self.__field__ = MSField(sizeN, sizeM, mines, self)
+                self.__field__ = MSField(sizen, sizem, mines, self)
         self.__field__.finit = 0
         
         self.__field__.defuse_cell(column, row)
         
         if self.__field__.finit == 2:
-            percentage = round(self.__field__.kill_field()/self.__field__.sizeM/self.__field__.sizeN*100)
+            percentage = round(self.__field__.kill_field()/self.__field__.sizem/self.__field__.sizen*100)
             self.__field__.finit = 1
             call_button.setStyleSheet("background-color: red")
 
             sb = MSScoreboard()
             state = 0
-            if self.__field__.sizeM == 16: state = 1
-            if self.__field__.sizeM == 30: state = 2
+            if self.__field__.sizem == 16: state = 1
+            if self.__field__.sizem == 30: state = 2
             sb.add_level(state, 0, percentage)
             
             msgBox = QtGui.QMessageBox()
@@ -119,7 +119,7 @@ class MSScreen(QtGui.QMainWindow):
             msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Reset)  
             ret = msgBox.exec_()
             if (ret == QtGui.QMessageBox.Reset):
-                self.__new_field_create__(self.__field__.sizeN, self.__field__.sizeM, self.__field__.__mines__)
+                self.__new_field_create__(self.__field__.sizen, self.__field__.sizem, self.__field__.__mines__)
             return True 
     
     def __get_button_toggle__(self):
@@ -138,10 +138,10 @@ class MSScreen(QtGui.QMainWindow):
         
         msgBox_layout = msgBox.layout()
         
-        groupBox = QtGui.QGroupBox("Выберите сложность")
-        radio1 = QtGui.QRadioButton("Новичок")
-        radio2 = QtGui.QRadioButton("Любитель")
-        radio3 = QtGui.QRadioButton("Профессионал")
+        groupBox = QtGui.QGroupBox("Choose difficulty")
+        radio1 = QtGui.QRadioButton("Beginner")
+        radio2 = QtGui.QRadioButton("Intermediate")
+        radio3 = QtGui.QRadioButton("Professional")
         radio1.setChecked(True)
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(radio1)
@@ -154,15 +154,15 @@ class MSScreen(QtGui.QMainWindow):
         ret = msgBox.exec_()
         
         if (ret == QtGui.QMessageBox.Ok):
-            sizeN, sizeM, mines = 0, 0, 0
-            if radio1.isChecked(): sizeN, sizeM, mines = 8, 8, 10
-            if radio2.isChecked(): sizeN, sizeM, mines = 16, 16, 40
-            if radio3.isChecked(): sizeN, sizeM, mines = 16, 30, 99
-            self.__new_field_create__(sizeN, sizeM, mines)
+            sizen, sizem, mines = 0, 0, 0
+            if radio1.isChecked(): sizen, sizem, mines = 8, 8, 10
+            if radio2.isChecked(): sizen, sizem, mines = 16, 16, 40
+            if radio3.isChecked(): sizen, sizem, mines = 16, 30, 99
+            self.__new_field_create__(sizen, sizem, mines)
     
-    def __new_field_create__(self, sizeN, sizeM, mines):
+    def __new_field_create__(self, sizen, sizem, mines):
         """Create a new field or replace the old one"""
-        self.__field__ = MSField(sizeN, sizeM, mines, self)
+        self.__field__ = MSField(sizen, sizem, mines, self)
         
         #Create central widget for this game and overwrite previous one
         centralWidget = QtGui.QWidget()
@@ -172,8 +172,8 @@ class MSScreen(QtGui.QMainWindow):
         self.__grid__ = QtGui.QGridLayout()
         self.__grid__.setSpacing(0)
         
-        for i in range(self.__field__.sizeN):
-            for j in range(self.__field__.sizeM):
+        for i in range(self.__field__.sizen):
+            for j in range(self.__field__.sizem):
                 button = MSButton()
                 button.rightClicked.connect(self.__get_button_action__)
                 button.leftClicked.connect(self.__get_button_toggle__)
@@ -259,8 +259,8 @@ class MSScreen(QtGui.QMainWindow):
             
             sb = MSScoreboard()
             state = 0
-            if self.__field__.sizeM == 16: state = 1
-            if self.__field__.sizeM == 30: state = 2
+            if self.__field__.sizem == 16: state = 1
+            if self.__field__.sizem == 30: state = 2
             sb.add_level(state, 1, 100)
             
             msgBox = QtGui.QMessageBox()
@@ -270,7 +270,7 @@ class MSScreen(QtGui.QMainWindow):
             msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Reset)  
             ret = msgBox.exec_()
             if (ret == QtGui.QMessageBox.Reset):
-                self.__new_field_create__(self.__field__.sizeN, self.__field__.sizeM, self.__field__.__mines__)
+                self.__new_field_create__(self.__field__.sizen, self.__field__.sizem, self.__field__.__mines__)
                 pass
             return True
         return False
