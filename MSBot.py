@@ -1,5 +1,6 @@
 import random
 import copy
+import logging
 from PySide import QtCore
 from threading import Thread
 
@@ -15,12 +16,22 @@ class MSBot(Thread):
         self.__connectors__ = Connectors()
             
     def run(self):
-        if self.step1_mnf(): return
-        if self.step2_tnc(): return
-        if self.step3_rna(): return
-        if self.step4_start(): return
-    
-    def step1_mnf(self):
+        logging.info('Started!')
+        if self.mnf(): 
+            logging.info('Stopped!')
+            return
+        if self.tnc(): 
+            logging.info('Stopped!')
+            return
+        if self.rna(): 
+            logging.info('Stopped!')
+            return
+        if self.strt(): 
+            logging.info('Stopped!')
+            return
+        logging.info('Stopped!')
+        
+    def mnf(self):
         """Mines and frees bruteforce
         Check if around cell is enough mines
         If mines = M open all cells around this one
@@ -57,7 +68,7 @@ class MSBot(Thread):
         #console.append('m&f Bruteforce failed')
         return False
     
-    def step2_tnc(self):
+    def tnc(self):
         ret = False
         """Tank and caim bruteforce
         Bulletproof but slow as hell"""
@@ -118,7 +129,7 @@ class MSBot(Thread):
         
         for cur_list in free_seg_list:
             #print(len(cur_list))
-            if (len(cur_list) > 10): continue 
+            if (len(cur_list) > 20): continue 
             
             tank_field = copy.copy(field)
             cur_nums = list()
@@ -240,10 +251,10 @@ class MSBot(Thread):
                 return True
         #else:
             #self.console_signal.emit('t&c Bruteforce failed')
-            
+         
         return False
          
-    def step3_rna(self):
+    def rna(self):
         """Random and assist bruteforce
         Count probability of mine in every cell and set mine or flag depending on assist
         Isn't bulletproof bruteforce!
@@ -350,7 +361,7 @@ class MSBot(Thread):
 
         return True
     
-    def step4_start(self):
+    def strt(self):
         """Just open random cell at the beginning or if bug appears"""
         #console = self.__screen__.__console__
         #console.append('Start field')

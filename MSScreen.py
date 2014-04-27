@@ -7,6 +7,24 @@ from MSButton import MSButton
 from MSBot import MSBot
 from MSScoreboard import MSScoreboard
 
+class Repeater(threading.Thread):
+    def __init__(self, screen, period):
+        threading.Thread.__init__(self)
+        self._screen = screen
+        self._period = period
+        self._run = True
+    
+    def run(self):
+        while self._run and self._screen.__field__.finit <= 0:
+            try:
+                self._screen.__bot_thread__.join()
+            except Exception: pass
+            self._screen.__bot_step__()
+            time.sleep(self._period)
+    
+    def stop(self):
+        self._run = False
+        
 class MSScreen(QtGui.QMainWindow):  
     def __init__(self):
         """Constructor"""
@@ -232,13 +250,14 @@ class MSScreen(QtGui.QMainWindow):
         self.centralWidget().setFixedSize(self.centralWidget().sizeHint())
         self.setFixedSize(self.sizeHint())
         self.__bot_thread__ = MSBot(self, self)
+        self.__autobot_thread__ = Repeater(self, 0.1)
         
         self.__mnf__ = 0
         self.__tnc_bp__ = 0
         self.__tnc_rd__ = 0
         self.__rna__ = 0
         
-        self.__botstate__ = 0
+        #self.__botstate__ = 0
 
     def __bot_step__(self):
         """Start bot thread"""
@@ -246,8 +265,6 @@ class MSScreen(QtGui.QMainWindow):
             self.__bot_thread__ = MSBot(self, self)
             self.__bot_thread__.__connectors__.console_signal.connect(self.console_append, QtCore.Qt.QueuedConnection)
             self.__bot_thread__.__connectors__.button_signal.connect(self.button_style, QtCore.Qt.QueuedConnection)
-            #QtCore.QObject.connect(self.__bot_thread__, QtCore.SIGNAL("console_append(str)"), self, QtCore.SLOT("__console_append__(str)"), QtCore.Qt.QueuedConnection)
-            #QtCore.QObject.connect(self.__bot_thread__, QtCore.SIGNAL("button_style(int, int, str)"), self, QtCore.SLOT("__button_style__(int, int, str)"), QtCore.Qt.QueuedConnection)
             self.__bot_thread__.start()
 
     def __game_finished__(self):
@@ -277,18 +294,24 @@ class MSScreen(QtGui.QMainWindow):
     
     def __start_autobot__(self, period=0.1):
         """In period start botstep"""
-        if self.__botstate__ == 1: 
-            self.__botstate__ = 0
+        if self.__autobot_thread__.isAlive():
+            self.__autobot_thread__.stop()
+            self.__autobot_thread__.join()
         else:
-            self.__botstate__ = 1
+            self.__autobot_thread__ = Repeater(self, 0.1)
+            self.__autobot_thread__.start()
+        #if self.__botstate__ == 1: 
+        #    self.__botstate__ = 0
+        #else:
+        #    self.__botstate__ = 1
 
-        def repeat():
-            if self.__field__.finit <= 0 and self.__botstate__ == 1:
-                if not self.__bot_thread__.isAlive(): 
-                    self.__botstep__.triggered.emit()
-                threading.Timer(period, repeat).start()
-                    
-        if self.__field__.finit <= 0: threading.Timer(period, repeat).start()
+        #def repeat():
+        #    if self.__field__.finit <= 0 and self.__botstate__ == 1:
+        #        if not self.__bot_thread__.isAlive(): 
+        #            self.__botstep__.triggered.emit()
+        #        threading.Timer(period, repeat).start()
+        
+        #if self.__field__.finit <= 0: threading.Timer(period, repeat).start()
     
     #@QtCore.Slot(str)
     def console_append(self, string):
@@ -296,9 +319,8 @@ class MSScreen(QtGui.QMainWindow):
     
     #@QtCore.Slot(int, int, str)
     def button_style(self, x, y, string):
-        print(string)
         self.__grid__.itemAtPosition(x, y).widget().setStyleSheet(string)
-    
+        
     def __load_scoreboard__(self):
         """Show the scoreboard"""
         sb = MSScoreboard()

@@ -1,5 +1,4 @@
 from PySide import QtGui, QtCore
-import logging
 
 class MSButton(QtGui.QPushButton):
     #Let's catch left and right mouse click
@@ -17,10 +16,10 @@ class MSButton(QtGui.QPushButton):
     def mousePressEvent(self, event):
         """Handle presses"""
         if   event.button() == QtCore.Qt.LeftButton:
-            logging.debug('Left button pressed')
+            #logging.info('Left button pressed')
             self.rightClicked.emit()
         elif event.button() == QtCore.Qt.RightButton:
-            logging.debug('Right button pressed')
+            #logging.info('Right button pressed')
             self.leftClicked.emit()
 
 if __name__ == '__main__':

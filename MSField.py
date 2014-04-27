@@ -42,8 +42,8 @@ class MSField():
             info_str = ''
             for j in range(self.sizem):
                 info_str += str(self.__field_opened__[i][j])
-            logging.info(info_str)
-        logging.info('')
+            logging.debug(info_str)
+        logging.debug('')
 
     def print_closed(self):
         """Debug print closed"""
@@ -51,8 +51,8 @@ class MSField():
             info_str = ''
             for j in range(self.sizem):
                 info_str += str(self.field_closed[i][j])
-            logging.info(info_str)
-        logging.info('')
+            logging.debug(info_str)
+        logging.debug('')
 
     def is_solved(self):
         """Check if field contain any closed numbers"""
@@ -109,7 +109,6 @@ class MSField():
 
     def __cell_dfs__(self, i, j, used):
         """Caim dfs on cells with caim val = 0"""
-        logging.info('Started with ({}, {})'.format(i, j))
         #Add cell to used if it is not already there
         if (i, j) in used:
             return
