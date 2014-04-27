@@ -2,28 +2,84 @@ from PySide import QtGui, QtCore
 import sys
 import time
 import threading
+import logging
+from multiprocessing import Queue #@UnresolvedImport
 from MSField import MSField
 from MSButton import MSButton
 from MSBot import MSBot
 from MSScoreboard import MSScoreboard
 
+class Connectors(QtCore.QObject):
+    console_signal = QtCore.Signal(str)
+    button_signal = QtCore.Signal(int, int, str)
+
 class Repeater(threading.Thread):
-    def __init__(self, screen, period):
+    def __init__(self, screen, queue, period = 0.1):
         threading.Thread.__init__(self)
+        self.setName('Repeater')
         self._screen = screen
         self._period = period
         self._run = True
+        self._queue = queue
     
     def run(self):
+        logging.info('Started')
         while self._run and self._screen.__field__.finit <= 0:
             try:
                 self._screen.__bot_thread__.join()
             except Exception: pass
-            self._screen.__bot_step__()
+            self._screen.__botstep__.triggered.emit()
+            try:
+                self._screen.__bot_thread__.join()
+            except Exception: pass
+            while not self._queue.empty():
+                time.sleep(self._period / 10)
             time.sleep(self._period)
-    
+            logging.info('Rewind!')
+        logging.info('Stopped')
+        
     def stop(self):
         self._run = False
+
+class QueueHandler(threading.Thread):
+    def __init__(self, queue, screen):
+        threading.Thread.__init__(self)
+        self.setName('Queue')
+        self._queue = queue
+        self._connectors = Connectors()
+        self._working = True
+        self._screen = screen
+    
+    def run(self):
+        while self._working:
+            while not self._queue.empty():
+                ask = self._queue.get()
+                if ask[0] == 'console':
+                    self._connectors.console_signal.emit(ask[1])
+                elif ask[0] == 'pressR':
+                    self._screen.__grid__.itemAtPosition(ask[1][0], ask[1][1]).widget().rightClicked.emit()
+                elif ask[0] == 'pressL':
+                    self._screen.__grid__.itemAtPosition(ask[1][0], ask[1][1]).widget().leftClicked.emit()
+                elif ask[0] == 'update':
+                    if ask[1] == 0:
+                        self._screen.__mnf__ += 1
+                        self._screen.__val_mnf__.setText('Number of m&f: {}'.format(self._screen.__mnf__))
+                    elif ask[1] == 1:
+                        self._screen.__tnc_bp__ += 1
+                        self._screen.__val_tnc_bp__.setText('Number of t&c bp: {}'.format(self._screen.__tnc_bp__)) 
+                    elif ask[1] == 2:
+                        self._screen.__tnc_rd__ += 1
+                        self._screen.__val_tnc_rd__.setText('Number of t&c rd: {}'.format(self._screen.__tnc_rd__))
+                    elif ask[1] == 3:
+                        self._screen.__rna__ += 1
+                        self._screen.__val_rna__.setText('Number of r&a: {}'.format(self._screen.__rna__))                
+                else:
+                    self._connectors.console_signal.emit('Unknown signal arrived!') 
+            
+            time.sleep(0.1)
+         
+    def stop(self): 
+        self._working = False         
         
 class MSScreen(QtGui.QMainWindow):  
     def __init__(self):
@@ -79,6 +135,10 @@ class MSScreen(QtGui.QMainWindow):
 
         self.setWindowTitle('Minesweeper')
         self.setWindowIcon(QtGui.QIcon('M.png'))
+        self._queue = Queue()
+        self._queue_handler = QueueHandler(self._queue, self)
+        self._queue_handler._connectors.console_signal.connect(self.console_append, QtCore.Qt.QueuedConnection)
+        self._queue_handler.start()
     
     def setNames(self, i, j, val):
         if (self.__game_finished__()): return 
@@ -246,11 +306,11 @@ class MSScreen(QtGui.QMainWindow):
         
         self.__bot_work__ = False
         
-        self.__bot__ = MSBot(self)
         self.centralWidget().setFixedSize(self.centralWidget().sizeHint())
         self.setFixedSize(self.sizeHint())
-        self.__bot_thread__ = MSBot(self, self)
-        self.__autobot_thread__ = Repeater(self, 0.1)
+        self.__bot_thread__ = MSBot(self, self._queue, self)
+        self.__autobot_thread__ = Repeater(self, self._queue, 0.1)
+        self.__autobot_thread__._run = False
         
         self.__mnf__ = 0
         self.__tnc_bp__ = 0
@@ -261,10 +321,8 @@ class MSScreen(QtGui.QMainWindow):
 
     def __bot_step__(self):
         """Start bot thread"""
-        if not self.__bot_thread__.isAlive():
-            self.__bot_thread__ = MSBot(self, self)
-            self.__bot_thread__.__connectors__.console_signal.connect(self.console_append, QtCore.Qt.QueuedConnection)
-            self.__bot_thread__.__connectors__.button_signal.connect(self.button_style, QtCore.Qt.QueuedConnection)
+        if not self.__bot_thread__.is_alive():
+            self.__bot_thread__ = MSBot(self, self._queue, self)
             self.__bot_thread__.start()
 
     def __game_finished__(self):
@@ -292,13 +350,15 @@ class MSScreen(QtGui.QMainWindow):
             return True
         return False
     
-    def __start_autobot__(self, period=0.1):
+    def __start_autobot__(self):
         """In period start botstep"""
-        if self.__autobot_thread__.isAlive():
+        if self.__autobot_thread__._run == True:
             self.__autobot_thread__.stop()
-            self.__autobot_thread__.join()
+            try:
+                self.__autobot_thread__.join()
+            except Exception: pass
         else:
-            self.__autobot_thread__ = Repeater(self, 0.1)
+            self.__autobot_thread__ = Repeater(self, self._queue)
             self.__autobot_thread__.start()
         #if self.__botstate__ == 1: 
         #    self.__botstate__ = 0
@@ -338,6 +398,10 @@ def initGame():
     scr = MSScreen()    
     scr.show()
     app.exec_()
+    
+    scr._queue_handler.stop()
+    scr.__autobot_thread__.stop()
+    scr.__bot_thread__.stop()
 
 if __name__ == '__main__':
     raise Exception("Can't be executed from main")

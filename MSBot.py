@@ -1,35 +1,22 @@
 import random
 import copy
-import logging
-from PySide import QtCore
-from threading import Thread
+import time
+import sys
 
-class Connectors(QtCore.QObject):
-    console_signal = QtCore.Signal(str)
-    button_signal = QtCore.Signal(int, int, str)
+from multiprocessing import Process #@UnresolvedImport
 
-class MSBot(Thread):
-    def __init__(self, screen, parent = None):
+class MSBot(Process):
+    def __init__(self, screen, queue=None, parent = None):
         """Constructor"""
-        Thread.__init__(self)
+        Process.__init__(self)
         self.__screen__  = screen
-        self.__connectors__ = Connectors()
+        self._queue = queue
             
     def run(self):
-        logging.info('Started!')
-        if self.mnf(): 
-            logging.info('Stopped!')
-            return
-        if self.tnc(): 
-            logging.info('Stopped!')
-            return
-        if self.rna(): 
-            logging.info('Stopped!')
-            return
-        if self.strt(): 
-            logging.info('Stopped!')
-            return
-        logging.info('Stopped!')
+        if self.mnf(): return
+        if self.tnc(): return
+        if self.rna(): return
+        if self.strt(): return
         
     def mnf(self):
         """Mines and frees bruteforce
@@ -38,34 +25,16 @@ class MSBot(Thread):
         If mines+frees = M all cells around this are mines
         Is bulletproof bruteforce if opened cells are correct"""
         field = self.__screen__.__field__
-        #val_mnf = self.__screen__.__val_mnf__
-        
-        #self.emit(QtCore.SIGNAL("console_append(str)"), 'Start m&f bruteforcing')
-        self.__connectors__.console_signal.emit('Start m&f bruteforcing')
-
+                    
         for x in range(field.sizen):
             for y in range(field.sizem):
                 if field.field_closed[x][y] == 0: continue
                 mines, frees = field.caim_prop(x, y)
                 if frees == 0: continue
-                if mines == field.field_closed[x][y]:
-                    self.__screen__.__grid__.itemAtPosition(x, y).widget().rightClicked.emit()
-                    #self.emit(QtCore.SIGNAL("button_style(int, int, str)"), x, y, "background-color: yellow")
-                    #console.append('    Success: props ({}, {})'.format(mines, frees))
-                    self.__connectors__.console_signal.emit('    Success!')
-                    self.__screen__.__mnf__ += 1
-                    self.__screen__.__val_mnf__.setText('Number of m&f: {}'.format(self.__screen__.__mnf__))
+                if mines == field.field_closed[x][y] or frees+mines == field.field_closed[x][y]:
+                    self._queue.put(('pressR', (x, y)))
+                    self._queue.put(('update', 0))
                     return True
-                elif frees+mines == field.field_closed[x][y]:
-                    self.__screen__.__grid__.itemAtPosition(x, y).widget().rightClicked.emit()
-                    #self.emit(QtCore.SIGNAL("button_style(int, int, str)"), x, y, "background-color: yellow")
-                    #console.append('    Success: props ({}, {})'.format(mines, frees))
-                    self.__connectors__.console_signal.emit('    Success!')
-                    #self.__mnf__ += 1
-                    #val_mnf.setText('Number of m&f: {}'.format(self.__mnf__))
-                    return True
-        #self.console_signal.emit('m&f Bruteforce failed')
-        #console.append('m&f Bruteforce failed')
         return False
     
     def tnc(self):
@@ -73,11 +42,9 @@ class MSBot(Thread):
         """Tank and caim bruteforce
         Bulletproof but slow as hell"""
         field = self.__screen__.__field__
-        #console = self.__screen__.__console__
         caim_nums = list()
         caim_frees = list()
-
-        self.__connectors__.console_signal.emit('Start t&c bruteforce!')
+        self._queue.put(['console', 'Start t&c bruteforce!'])
 
         for x in range(field.sizen):
             for y in range(field.sizem):
@@ -93,7 +60,6 @@ class MSBot(Thread):
                             
                 if is_frees and is_nums and type(field.field_closed[x][y]) == int: 
                     caim_nums.append((x, y))
-                    #self.__screen__.__grid__.itemAtPosition(x, y).widget().setStyleSheet("background-color: blue")
                 if is_frees and is_nums and field.field_closed[x][y] == 'C': 
                     caim_frees.append((x, y))
         
@@ -128,7 +94,6 @@ class MSBot(Thread):
         found_cells = dict()
         
         for cur_list in free_seg_list:
-            #print(len(cur_list))
             if (len(cur_list) > 20): continue 
             
             tank_field = copy.copy(field)
@@ -170,7 +135,7 @@ class MSBot(Thread):
             tankRecurse(0)
             
             if len(mine_solutions) == 0:
-                self.__connectors__.console_signal.emit('Something goes wrong...')
+                self._queue.put(['console', 'Something goes wrong...'])
                 return False
                 
             only_mine = copy.copy(cur_list)
@@ -196,21 +161,18 @@ class MSBot(Thread):
 
             for cell in only_mine:
                 ret = True
-                self.__screen__.__grid__.itemAtPosition(cell[0], cell[1]).widget().leftClicked.emit()
-                #self.emit(QtCore.SIGNAL("button_style(int, int, str)"), x, y, "background-color: orange")
+                self._queue.put(('pressL', (cell[0], cell[1])))
             for cell in only_free:
                 ret = True
-                self.__screen__.__grid__.itemAtPosition(cell[0], cell[1]).widget().rightClicked.emit()
-                #self.emit(QtCore.SIGNAL("button_style(int, int, str)"), x, y, "background-color: purple")
+                self._queue.put(('pressR', (cell[0], cell[1])))
 
         if ret:            
-            self.__screen__.__tnc_bp__ += 1
-            self.__screen__.__val_tnc_bp__.setText('Number of t&c bp: {}'.format(self.__screen__.__tnc_bp__))
-            self.__connectors__.console_signal.emit('    Success!')
+            self._queue.put(('update', 1))
+            self._queue.put(['console', '    Success!'])
+            time.sleep(1)
             return True
         else:
             if found_cells:
-                #print(found_cells)
                 min_cells = list()
                 min_probability = 2
                 max_cells = list()
@@ -226,31 +188,26 @@ class MSBot(Thread):
                         min_probability = found_cells[cell]
                         min_cells = list()
                     if found_cells[cell] == min_probability: min_cells.append(cell)
-                #print(min_cells)
-                #print(max_cells)
-                
-                #if min_probability < 0.2 and 1-max_probability < 0.2: return False
+
                 if min_probability == 1-max_probability:
                     if len(min_cells) > len(max_cells):
                         rand_cell = random.choice(min_cells)
-                        self.__screen__.__grid__.itemAtPosition(rand_cell[0], rand_cell[1]).widget().rightClicked.emit()
+                        self._queue.put(('pressR', (rand_cell[0], rand_cell[1])))
                     else:
                         rand_cell = random.choice(max_cells)
-                        self.__screen__.__grid__.itemAtPosition(rand_cell[0], rand_cell[1]).widget().leftClicked.emit()
+                        self._queue.put(('pressL', (rand_cell[0], rand_cell[1])))
 
-                
-                if min_probability <= 1-max_probability:
+                elif min_probability <= 1-max_probability:
                     rand_cell = random.choice(min_cells)
-                    self.__screen__.__grid__.itemAtPosition(rand_cell[0], rand_cell[1]).widget().rightClicked.emit()
+                    self._queue.put(('pressR', (rand_cell[0], rand_cell[1])))
                 else:
                     rand_cell = random.choice(max_cells)
-                    self.__screen__.__grid__.itemAtPosition(rand_cell[0], rand_cell[1]).widget().leftClicked.emit()
-                
-                self.__screen__.__tnc_rd__ += 1
-                self.__screen__.__val_tnc_rd__.setText('Number of t&c rd: {}'.format(self.__screen__.__tnc_rd__))
+                    self._queue.put(('pressL', (rand_cell[0], rand_cell[1])))
+
+                self._queue.put(('update', 2))
+                self._queue.put(['console', '    Success!'])
+                time.sleep(1)
                 return True
-        #else:
-            #self.console_signal.emit('t&c Bruteforce failed')
          
         return False
          
@@ -260,16 +217,14 @@ class MSBot(Thread):
         Isn't bulletproof bruteforce!
         """
         field = self.__screen__.__field__
-        #console = self.__screen__.__console__
-        #val_rna = self.__screen__.__val_rna__
 
         assist = [[0] * (field.sizem) for y in range(field.sizem)]
         
         counter = 0
         free_cells = list()
         
-        self.__connectors__.console_signal.emit('Start r&a bruteforce!')
-        #console.append('Start r&a bruteforcing')
+        self._queue.put(['console', 'Start r&a bruteforce!'])
+        
         for x in range(field.sizen):
             for y in range(field.sizem):
                 if field.field_closed[x][y] == 'C':
@@ -286,9 +241,8 @@ class MSBot(Thread):
                         if (field.field_closed[x_next][y_next] == 'C'): assist[x_next][y_next] += probability
         
         if counter <= 10:
-            #console.append('    Override standart check!')
             cell = random.choice(free_cells)
-            self.__screen__.__grid__.itemAtPosition(cell[0], cell[1]).widget().rightClicked.emit()
+            self._queue.put(('pressR', (cell[0], cell[1])))
             return True
         
         max_probability = -1
@@ -320,55 +274,35 @@ class MSBot(Thread):
         max_probability = max_probability - 70
         min_probability = 70 - min_probability
         
-        #console.append('    ({}, {}):'.format(min_probability, max_probability))
-
         if abs(max_probability - min_probability) < 20:
-            #console.append('    Random!')
-            #console.append('    From {}+{} cells'.format(len(max_cells), len(min_cells)))
-            
-            #self.__rna__ += 1
-            #val_rna.setText('Number of r&a: {}'.format(self.__rna__))
 
             if (random.random() > 0.5):
                 (x, y) = random.choice(max_cells)
-                self.__screen__.__grid__.itemAtPosition(x, y).widget().leftClicked.emit()
-                #self.emit(QtCore.SIGNAL("button_style(int, int, str)"), x, y, "background-color: pink")
+                self._queue.put(('pressL', (x, y)))
             else:
-                (x, y) = random.choice(max_cells)
-                self.__screen__.__grid__.itemAtPosition(x, y).widget().leftClicked.emit()
-                #self.emit(QtCore.SIGNAL("button_style(int, int, str)"), x, y, "background-color: pink")
+                (x, y) = random.choice(min_cells)
+                self._queue.put(('pressR', (x, y)))
             return True
         
         if max_probability >= min_probability:
-            #console.append('    Mine found!:')
-            #console.append('    From {} cells'.format(len(max_cells)))
-            #self.__rna__ += 1
-            #val_rna.setText('Number of r&a: {}'.format(self.__rna__))
             (x, y) = random.choice(max_cells)
-            self.__screen__.__grid__.itemAtPosition(x, y).widget().leftClicked.emit()
-            #self.emit(QtCore.SIGNAL("button_style(int, int, str)"), x, y, "background-color: pink")
+            self._queue.put(('pressL', (x, y)))
         else:
-            #console.append('    Free found!:')
-            #console.append('    From {} cells'.format(len(min_cells)))
-            #self.__rna__ += 1
-            #val_rna.setText('Number of r&a: {}'.format(self.__rna__))
             (x, y) = random.choice(min_cells)
-            self.__screen__.__grid__.itemAtPosition(x, y).widget().rightClicked.emit()
-            #self.emit(QtCore.SIGNAL("button_style(int, int, str)"), x, y, "background-color: pink")
-        self.__screen__.__rna__ += 1
-        self.__screen__.__val_rna__.setText('Number of r&a: {}'.format(self.__screen__.__rna__))
-        self.__connectors__.console_signal.emit('    Success!')
+            self._queue.put(('pressR', (x, y)))
+        self._queue.put(('update', 3))
+        self._queue.put(['console', '    Success!'])
 
         return True
     
     def strt(self):
         """Just open random cell at the beginning or if bug appears"""
-        #console = self.__screen__.__console__
-        #console.append('Start field')
-        self.__connectors__.console_signal.emit('Start field!')
         field = self.__screen__.__field__
-        self.__screen__.__grid__.itemAtPosition(round(field.sizen/2), round(field.sizem/2)).widget().rightClicked.emit()
+        self._queue.put(('pressR', (round(field.sizen/2), round(field.sizem/2))))        
         return True
+
+    def stop(self):
+        sys.exit()
 
 if __name__ == '__main__':
     raise Exception("Can't be executed from main")
