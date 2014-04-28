@@ -2,8 +2,8 @@ from PySide import QtGui, QtCore
 
 class MSButton(QtGui.QPushButton):
     #Let's catch left and right mouse click
-    rightClicked = QtCore.Signal()
-    leftClicked = QtCore.Signal()
+    right_clicked = QtCore.Signal()
+    left_clicked = QtCore.Signal()
     
     def __init__(self):
         """Constructor"""
@@ -17,10 +17,10 @@ class MSButton(QtGui.QPushButton):
         """Handle presses"""
         if   event.button() == QtCore.Qt.LeftButton:
             #logging.info('Left button pressed')
-            self.rightClicked.emit()
+            self.right_clicked.emit()
         elif event.button() == QtCore.Qt.RightButton:
             #logging.info('Right button pressed')
-            self.leftClicked.emit()
+            self.left_clicked.emit()
 
 if __name__ == '__main__':
     raise Exception("Can't be executed from main")

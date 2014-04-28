@@ -1,5 +1,5 @@
 from MSScreen import initGame
-import logging
+#import logging
 
-logging.basicConfig(level=logging.INFO, format='(%(threadName)s) (%(funcName)s) %(message)s')
+#logging.basicConfig(level=logging.INFO, format='(%(threadName)s) (%(funcName)s) %(message)s')
 initGame()

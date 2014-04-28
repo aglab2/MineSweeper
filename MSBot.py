@@ -9,7 +9,7 @@ class MSBot(Process):
     def __init__(self, screen, queue=None, parent = None):
         """Constructor"""
         Process.__init__(self)
-        self.__screen__  = screen
+        self._screen  = screen
         self._queue = queue
             
     def run(self):
@@ -24,7 +24,7 @@ class MSBot(Process):
         If mines = M open all cells around this one
         If mines+frees = M all cells around this are mines
         Is bulletproof bruteforce if opened cells are correct"""
-        field = self.__screen__.__field__
+        field = self._screen._field
                     
         for x in range(field.sizen):
             for y in range(field.sizem):
@@ -41,7 +41,7 @@ class MSBot(Process):
         ret = False
         """Tank and caim bruteforce
         Bulletproof but slow as hell"""
-        field = self.__screen__.__field__
+        field = self._screen._field
         caim_nums = list()
         caim_frees = list()
         self._queue.put(['console', 'Start t&c bruteforce!'])
@@ -94,7 +94,7 @@ class MSBot(Process):
         found_cells = dict()
         
         for cur_list in free_seg_list:
-            if (len(cur_list) > 20): continue 
+            if (len(cur_list) > 18): continue 
             
             tank_field = copy.copy(field)
             cur_nums = list()
@@ -189,23 +189,35 @@ class MSBot(Process):
                         min_cells = list()
                     if found_cells[cell] == min_probability: min_cells.append(cell)
 
+                prob = min_probability
                 if min_probability == 1-max_probability:
+                    if min_probability > 0.3: 
+                        self._queue.put(['console', '    Omit! P:{}'.format(prob)])
+                        return False
                     if len(min_cells) > len(max_cells):
                         rand_cell = random.choice(min_cells)
                         self._queue.put(('pressR', (rand_cell[0], rand_cell[1])))
                     else:
                         rand_cell = random.choice(max_cells)
                         self._queue.put(('pressL', (rand_cell[0], rand_cell[1])))
+                        prob = max_probability
 
                 elif min_probability <= 1-max_probability:
+                    if min_probability > 0.3: 
+                        self._queue.put(['console', '    Omit! P:{}'.format(prob)])
+                        return False
                     rand_cell = random.choice(min_cells)
                     self._queue.put(('pressR', (rand_cell[0], rand_cell[1])))
                 else:
+                    if max_probability < 0.7: 
+                        self._queue.put(['console', '    Omit! P:{}'.format(prob)])
+                        return False
                     rand_cell = random.choice(max_cells)
                     self._queue.put(('pressL', (rand_cell[0], rand_cell[1])))
+                    prob = max_probability
 
                 self._queue.put(('update', 2))
-                self._queue.put(['console', '    Success!'])
+                self._queue.put(['console', '    Success! P:{}'.format(prob)])
                 time.sleep(1)
                 return True
          
@@ -216,7 +228,7 @@ class MSBot(Process):
         Count probability of mine in every cell and set mine or flag depending on assist
         Isn't bulletproof bruteforce!
         """
-        field = self.__screen__.__field__
+        field = self._screen._field
 
         assist = [[0] * (field.sizem) for y in range(field.sizem)]
         
@@ -243,6 +255,7 @@ class MSBot(Process):
         if counter <= 10:
             cell = random.choice(free_cells)
             self._queue.put(('pressR', (cell[0], cell[1])))
+            self._queue.put(['console', '    Success!'])
             return True
         
         max_probability = -1
@@ -275,13 +288,13 @@ class MSBot(Process):
         min_probability = 70 - min_probability
         
         if abs(max_probability - min_probability) < 20:
-
             if (random.random() > 0.5):
                 (x, y) = random.choice(max_cells)
                 self._queue.put(('pressL', (x, y)))
             else:
                 (x, y) = random.choice(min_cells)
                 self._queue.put(('pressR', (x, y)))
+            self._queue.put(['console', '    Success!'])
             return True
         
         if max_probability >= min_probability:
@@ -297,7 +310,7 @@ class MSBot(Process):
     
     def strt(self):
         """Just open random cell at the beginning or if bug appears"""
-        field = self.__screen__.__field__
+        field = self._screen._field
         self._queue.put(('pressR', (round(field.sizen/2), round(field.sizem/2))))        
         return True
 

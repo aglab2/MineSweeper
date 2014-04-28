@@ -15,33 +15,33 @@ class MSField():
         random.shuffle(mine_field)
         self.sizen = sizen
         self.sizem = sizem
-        self.__mines__ = mines
+        self.mines = mines
         self.finit = -1
-        self.__field_opened__ = [mine_field[self.sizem*i:self.sizem*(i+1)]
+        self._field_opened = [mine_field[self.sizem*i:self.sizem*(i+1)]
                                  for i in range(self.sizen)]
         self.field_closed = [['C']*(self.sizem)
                              for i in range(self.sizen)]
-        self.__screen__ = screen
+        self._screen = screen
 
         #Count number of mines
         for i in range(self.sizen):
             for j in range(self.sizem):
-                if self.__field_opened__[i][j] == 'M':
+                if self._field_opened[i][j] == 'M':
                     continue
                 for caim in [(1, 1), (1, 0), (1, -1), (0, 1),
                              (-1, -1), (-1, 0), (-1, 1), (0, -1)]:
                     x_next, y_next = i+caim[0], j+caim[1]
                     if x_next in range(self.sizen) \
                     and y_next in range(self.sizem):
-                        if self.__field_opened__[x_next][y_next] == 'M':
-                            self.__field_opened__[i][j] += 1
+                        if self._field_opened[x_next][y_next] == 'M':
+                            self._field_opened[i][j] += 1
 
     def print_opened(self):
         """Debug print opened"""
         for i in range(self.sizen):
             info_str = ''
             for j in range(self.sizem):
-                info_str += str(self.__field_opened__[i][j])
+                info_str += str(self._field_opened[i][j])
             logging.debug(info_str)
         logging.debug('')
 
@@ -58,15 +58,15 @@ class MSField():
         """Check if field contain any closed numbers"""
         for i in range(self.sizen):
             for j in range(self.sizem):
-                if self.field_closed[i][j] != self.__field_opened__[i][j] and \
-                self.__field_opened__[i][j] != 'M': return False
+                if self.field_closed[i][j] != self._field_opened[i][j] and \
+                self._field_opened[i][j] != 'M': return False
         return True
 
     def defuse_cell(self, i, j):
         """Handles open cell activity"""
         logging.debug('Started with ({}, {})'.format(i, j))
         logging.debug('    closed: {}'.format(self.field_closed[i][j]))
-        logging.debug('    opened: {}'.format(self.__field_opened__[i][j]))
+        logging.debug('    opened: {}'.format(self._field_opened[i][j]))
 
         #Check whether current field is full
         if self.field_closed[i][j] != 'C' and self.field_closed[i][j] != 'F':
@@ -95,17 +95,17 @@ class MSField():
             if x_next in range(self.sizen) and y_next in range(self.sizem):
                 if self.field_closed[x_next][y_next] == 'C':
                     self.field_closed[x_next][y_next] = 'F'
-                    self.__screen__.setNames(x_next, y_next, 'F')
+                    self._screen.set_names(x_next, y_next, 'F')
 
     def __open_cell__(self, i, j):
         """Open cell and if caim val=0 call dfs on field"""
-        if self.__field_opened__[i][j] == 'M':
+        if self._field_opened[i][j] == 'M':
             self.finit = 2
-        if self.__field_opened__[i][j] == 0:
+        if self._field_opened[i][j] == 0:
             self.__cell_dfs__(i, j, set())
         else:
-            self.field_closed[i][j] = self.__field_opened__[i][j]
-            self.__screen__.setNames(i, j, self.__field_opened__[i][j])
+            self.field_closed[i][j] = self._field_opened[i][j]
+            self._screen.set_names(i, j, self._field_opened[i][j])
 
     def __cell_dfs__(self, i, j, used):
         """Caim dfs on cells with caim val = 0"""
@@ -114,8 +114,8 @@ class MSField():
             return
         used.add((i, j))
         #Open cell and call dfs from surrounding fields
-        self.field_closed[i][j] = self.__field_opened__[i][j]
-        self.__screen__.setNames(i, j, self.__field_opened__[i][j])
+        self.field_closed[i][j] = self._field_opened[i][j]
+        self._screen.set_names(i, j, self._field_opened[i][j])
 
         if self.field_closed[i][j] != 0:
             return
@@ -132,10 +132,10 @@ class MSField():
         #Set flag or unset flag
         if self.field_closed[i][j] == 'C':
             self.field_closed[i][j] = 'F'
-            self.__screen__.setNames(i, j, 'F')
+            self._screen.set_names(i, j, 'F')
         elif self.field_closed[i][j] == 'F':
             self.field_closed[i][j] = 'C'
-            self.__screen__.setNames(i, j, 'C')
+            self._screen.set_names(i, j, 'C')
 
     def caim_prop(self, i, j):
         """Get properties (mines&frees) of cell caim"""
@@ -157,18 +157,18 @@ class MSField():
         counter = 0
         for i in range(self.sizen):
             for j in range(self.sizem):
-                if self.field_closed[i][j] == self.__field_opened__[i][j] or \
+                if self.field_closed[i][j] == self._field_opened[i][j] or \
                 (self.field_closed[i][j] == 'F' and \
-                 self.__field_opened__[i][j] == 'M'):
+                 self._field_opened[i][j] == 'M'):
                     counter += 1
                 if self.field_closed[i][j] == 'C' and \
-                self.__field_opened__[i][j] == 'M':
+                self._field_opened[i][j] == 'M':
                     self.field_closed[i][j] = 'M'
-                    self.__screen__.setNames(i, j, 'M')
+                    self._screen.set_names(i, j, 'M')
                 if self.field_closed[i][j] == 'F' and \
-                self.__field_opened__[i][j] != 'M':
+                self._field_opened[i][j] != 'M':
                     self.field_closed[i][j] = 'P'
-                    self.__screen__.setNames(i, j, 'P')
+                    self._screen.set_names(i, j, 'P')
         return counter
 
 if __name__ == '__main__':
