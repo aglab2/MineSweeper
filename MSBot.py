@@ -6,10 +6,10 @@ import sys
 from multiprocessing import Process #@UnresolvedImport
 
 class MSBot(Process):
-    def __init__(self, screen, queue=None, parent = None):
+    def __init__(self, field, queue=None, parent = None):
         """Constructor"""
         Process.__init__(self)
-        self._screen  = screen
+        self._field  = field
         self._queue = queue
             
     def run(self):
@@ -24,7 +24,7 @@ class MSBot(Process):
         If mines = M open all cells around this one
         If mines+frees = M all cells around this are mines
         Is bulletproof bruteforce if opened cells are correct"""
-        field = self._screen._field
+        field = self._field
                     
         for x in range(field.sizen):
             for y in range(field.sizem):
@@ -41,7 +41,7 @@ class MSBot(Process):
         ret = False
         """Tank and caim bruteforce
         Bulletproof but slow as hell"""
-        field = self._screen._field
+        field = self._field
         caim_nums = list()
         caim_frees = list()
         self._queue.put(['console', 'Start t&c bruteforce!'])
@@ -228,7 +228,7 @@ class MSBot(Process):
         Count probability of mine in every cell and set mine or flag depending on assist
         Isn't bulletproof bruteforce!
         """
-        field = self._screen._field
+        field = self._field
 
         assist = [[0] * (field.sizem) for y in range(field.sizem)]
         
@@ -310,7 +310,7 @@ class MSBot(Process):
     
     def strt(self):
         """Just open random cell at the beginning or if bug appears"""
-        field = self._screen._field
+        field = self._field
         self._queue.put(('pressR', (round(field.sizen/2), round(field.sizem/2))))        
         return True
 
