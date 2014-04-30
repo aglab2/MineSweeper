@@ -3,7 +3,6 @@ import sys
 import time
 import threading
 import logging
-import copy
 from multiprocessing import Queue #@UnresolvedImport
 from MSField import MSField
 from MSButton import MSButton
@@ -142,13 +141,11 @@ class MSScreen(QtGui.QMainWindow):
         self._queue_handler.start()
     
     def set_names(self, i, j, val):
-        """Set new field names if game is not finished already"""
         if (self._game_finished()): return 
 
-        #if self._field.field_closed[i][j] != 'C':
-        #    return
-
-        if val == 'F': self._lcd_left.display(self._lcd_left.intValue() - 1)        
+        """Set new field names if game is not finished already"""
+        if (self._game_finished()): return 
+        
         cur_button = self._grid.itemAtPosition(i, j).widget()
         cur_geom = cur_button.geometry()
         icon_size = QtCore.QSize(cur_geom.width()*3/4, cur_geom.height()*3/4)
@@ -248,23 +245,6 @@ class MSScreen(QtGui.QMainWindow):
         self.setCentralWidget(central_widget)
         
         #Create grid and add buttons
-        vbox1 = QtGui.QVBoxLayout()
-        
-        lcd_layout = QtGui.QHBoxLayout()
-        self._lcd_left = QtGui.QLCDNumber()
-        self._lcd_left.setStyleSheet('background-color: black; color:red; border: 1px')
-        self._lcd_left.setFixedSize(self._lcd_left.sizeHint())
-        self._lcd_left.setNumDigits(2)
-        self._lcd_left.display(mines)
-        self._lcd_all = QtGui.QLCDNumber()
-        self._lcd_all.setStyleSheet('background-color: black; color:red; border: 1px')
-        self._lcd_all.setFixedSize(self._lcd_all.sizeHint())
-        self._lcd_all.setNumDigits(2)
-        self._lcd_all.display(mines)
-        lcd_layout.addWidget(self._lcd_left)
-        lcd_layout.addWidget(self._lcd_all)
-        vbox1.addLayout(lcd_layout)
-        
         self._grid = QtGui.QGridLayout()
         self._grid.setSpacing(0)
         
@@ -275,7 +255,6 @@ class MSScreen(QtGui.QMainWindow):
                 button.left_clicked.connect(self._get_button_toggle)
                 self._grid.addWidget(button, i, j)
                 self.set_names(i, j, 'C')
-        vbox1.addLayout(self._grid)
         
         vbox2 = QtGui.QVBoxLayout()
         self._val_mnf = QtGui.QLabel('Number of m&f: 0')
@@ -303,7 +282,7 @@ class MSScreen(QtGui.QMainWindow):
         #Starting all things
         
         term_layout = QtGui.QHBoxLayout()
-        term_layout.addLayout(vbox1)
+        term_layout.addLayout(self._grid)
         term_layout.addLayout(vbox2)
     
         central_widget.setLayout(term_layout)
@@ -327,7 +306,7 @@ class MSScreen(QtGui.QMainWindow):
         
         self.centralWidget().setFixedSize(self.centralWidget().sizeHint())
         self.setFixedSize(self.sizeHint())
-        self._bot_thread = MSBot(copy.copy(self._field), self._queue, self)
+        self._bot_thread = MSBot(self, self._queue, self)
         self._autobot_thread = Repeater(self, self._queue, 0.1)
         self._autobot_thread._run = False
         
@@ -341,7 +320,7 @@ class MSScreen(QtGui.QMainWindow):
     def _bot_step(self):
         """Start bot thread"""
         if not self._bot_thread.is_alive():
-            self._bot_thread = MSBot(copy.copy(self._field), self._queue, self)
+            self._bot_thread = MSBot(self, self._queue, self)
             self._bot_thread.start()
 
     def _game_finished(self):
