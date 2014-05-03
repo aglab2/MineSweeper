@@ -1,22 +1,31 @@
 import random
 import copy
 import time
-import sys
+import logging
 
 from multiprocessing import Process #@UnresolvedImport
 
 class MSBot(Process):
-    def __init__(self, screen, queue=None, parent = None):
+    def __init__(self, screen, pipe=None, parent = None):
         """Constructor"""
         Process.__init__(self)
         self._screen  = screen
-        self._queue = queue
+        self._pipe = pipe
             
     def run(self):
-        if self.mnf(): return
-        if self.tnc(): return
-        if self.rna(): return
-        if self.strt(): return
+        logging.info('Started')
+        if self.mnf(): 
+            logging.info('Stopped')
+            return
+        if self.tnc(): 
+            logging.info('Stopped')
+            return
+        if self.rna(): 
+            logging.info('Stopped')
+            return
+        if self.strt(): 
+            logging.info('Stopped')
+            return
         
     def mnf(self):
         """Mines and frees bruteforce
@@ -32,8 +41,8 @@ class MSBot(Process):
                 mines, frees = field.caim_prop(x, y)
                 if frees == 0: continue
                 if mines == field.field_closed[x][y] or frees+mines == field.field_closed[x][y]:
-                    self._queue.put(('pressR', (x, y)))
-                    self._queue.put(('update', 0))
+                    self._pipe.send(('pressR', (x, y)))
+                    self._pipe.send(('update', 0))
                     return True
         return False
     
@@ -44,7 +53,7 @@ class MSBot(Process):
         field = self._screen._field
         caim_nums = list()
         caim_frees = list()
-        self._queue.put(['console', 'Start t&c bruteforce!'])
+        self._pipe.send(['console', 'Start t&c bruteforce!'])
 
         for x in range(field.sizen):
             for y in range(field.sizem):
@@ -135,7 +144,7 @@ class MSBot(Process):
             tankRecurse(0)
             
             if len(mine_solutions) == 0:
-                self._queue.put(['console', 'Something goes wrong...'])
+                self._pipe.send(['console', 'Something goes wrong...'])
                 return False
                 
             only_mine = copy.copy(cur_list)
@@ -161,14 +170,14 @@ class MSBot(Process):
 
             for cell in only_mine:
                 ret = True
-                self._queue.put(('pressL', (cell[0], cell[1])))
+                self._pipe.send(('pressL', (cell[0], cell[1])))
             for cell in only_free:
                 ret = True
-                self._queue.put(('pressR', (cell[0], cell[1])))
+                self._pipe.send(('pressR', (cell[0], cell[1])))
 
         if ret:            
-            self._queue.put(('update', 1))
-            self._queue.put(['console', '    Success!'])
+            self._pipe.send(('update', 1))
+            self._pipe.send(['console', '    Success!'])
             time.sleep(1)
             return True
         else:
@@ -192,33 +201,32 @@ class MSBot(Process):
                 prob = min_probability
                 if min_probability == 1-max_probability:
                     if min_probability > 0.3: 
-                        self._queue.put(['console', '    Omit! P:{}'.format(prob)])
+                        self._pipe.send(['console', '    Omit! P:{}'.format(prob)])
                         return False
                     if len(min_cells) > len(max_cells):
                         rand_cell = random.choice(min_cells)
-                        self._queue.put(('pressR', (rand_cell[0], rand_cell[1])))
+                        self._pipe.send(('pressR', (rand_cell[0], rand_cell[1])))
                     else:
                         rand_cell = random.choice(max_cells)
-                        self._queue.put(('pressL', (rand_cell[0], rand_cell[1])))
+                        self._pipe.send(('pressL', (rand_cell[0], rand_cell[1])))
                         prob = max_probability
 
                 elif min_probability <= 1-max_probability:
                     if min_probability > 0.3: 
-                        self._queue.put(['console', '    Omit! P:{}'.format(prob)])
+                        self._pipe.send(['console', '    Omit! P:{}'.format(prob)])
                         return False
                     rand_cell = random.choice(min_cells)
-                    self._queue.put(('pressR', (rand_cell[0], rand_cell[1])))
+                    self._pipe.send(('pressR', (rand_cell[0], rand_cell[1])))
                 else:
                     if max_probability < 0.7: 
-                        self._queue.put(['console', '    Omit! P:{}'.format(prob)])
+                        self._pipe.send(['console', '    Omit! P:{}'.format(prob)])
                         return False
                     rand_cell = random.choice(max_cells)
-                    self._queue.put(('pressL', (rand_cell[0], rand_cell[1])))
+                    self._pipe.send(('pressL', (rand_cell[0], rand_cell[1])))
                     prob = max_probability
 
-                self._queue.put(('update', 2))
-                self._queue.put(['console', '    Success! P:{}'.format(prob)])
-                time.sleep(1)
+                self._pipe.send(('update', 2))
+                self._pipe.send(['console', '    Success! P:{}'.format(prob)])
                 return True
          
         return False
@@ -235,7 +243,7 @@ class MSBot(Process):
         counter = 0
         free_cells = list()
         
-        self._queue.put(['console', 'Start r&a bruteforce!'])
+        self._pipe.send(['console', 'Start r&a bruteforce!'])
         
         for x in range(field.sizen):
             for y in range(field.sizem):
@@ -254,8 +262,8 @@ class MSBot(Process):
         
         if counter <= 10:
             cell = random.choice(free_cells)
-            self._queue.put(('pressR', (cell[0], cell[1])))
-            self._queue.put(['console', '    Success!'])
+            self._pipe.send(('pressR', (cell[0], cell[1])))
+            self._pipe.send(['console', '    Success!'])
             return True
         
         max_probability = -1
@@ -290,32 +298,29 @@ class MSBot(Process):
         if abs(max_probability - min_probability) < 20:
             if (random.random() > 0.5):
                 (x, y) = random.choice(max_cells)
-                self._queue.put(('pressL', (x, y)))
+                self._pipe.send(('pressL', (x, y)))
             else:
                 (x, y) = random.choice(min_cells)
-                self._queue.put(('pressR', (x, y)))
-            self._queue.put(['console', '    Success!'])
+                self._pipe.send(('pressR', (x, y)))
+            self._pipe.send(['console', '    Success!'])
             return True
         
         if max_probability >= min_probability:
             (x, y) = random.choice(max_cells)
-            self._queue.put(('pressL', (x, y)))
+            self._pipe.send(('pressL', (x, y)))
         else:
             (x, y) = random.choice(min_cells)
-            self._queue.put(('pressR', (x, y)))
-        self._queue.put(('update', 3))
-        self._queue.put(['console', '    Success!'])
+            self._pipe.send(('pressR', (x, y)))
+        self._pipe.send(('update', 3))
+        self._pipe.send(['console', '    Success!'])
 
         return True
     
     def strt(self):
         """Just open random cell at the beginning or if bug appears"""
         field = self._screen._field
-        self._queue.put(('pressR', (round(field.sizen/2), round(field.sizem/2))))        
+        self._pipe.send(('pressR', (round(field.sizen/2), round(field.sizem/2))))        
         return True
-
-    def stop(self):
-        sys.exit()
 
 if __name__ == '__main__':
     raise Exception("Can't be executed from main")

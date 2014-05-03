@@ -11,14 +11,23 @@ class MSField():
         if mines > sizen*sizem:
             raise Exception('To many mines for this field size')
         #Initiate field and properties of fields
-        mine_field = ['M']*mines + [0]*(sizen*sizem-mines) #mines+free spaces
-        random.shuffle(mine_field)
+        #mine_field = ['M']*mines + [0]*(sizen*sizem-mines) #mines+free spaces
+        #random.shuffle(mine_field)
         self.sizen = sizen
         self.sizem = sizem
         self.mines = mines
         self.finit = -1
-        self._field_opened = [mine_field[self.sizem*i:self.sizem*(i+1)]
-                                 for i in range(self.sizen)]
+        
+        self._field_opened = [[0]*(self.sizem)
+                             for i in range(self.sizen)]
+        all_cell = [(i, j) for i in range(self.sizen) for j in range(self.sizem)]
+        for i in range(self.mines):
+            mine_cell = random.choice(all_cell)
+            self._field_opened[mine_cell[0]][mine_cell[1]] = 'M'
+            all_cell.remove(mine_cell)
+        #self._field_opened = [mine_field[self.sizem*i:self.sizem*(i+1)]
+        #                         for i in range(self.sizen)]
+        
         self.field_closed = [['C']*(self.sizem)
                              for i in range(self.sizen)]
         self._screen = screen
@@ -35,6 +44,40 @@ class MSField():
                     and y_next in range(self.sizem):
                         if self._field_opened[x_next][y_next] == 'M':
                             self._field_opened[i][j] += 1
+
+    def refield(self, x, y):
+        #mine_field = ['M']*mines + [0]*(sizen*sizem-mines) #mines+free spaces
+        #random.shuffle(mine_field)
+        self._field_opened = [['C']*(self.sizem)
+                             for i in range(self.sizen)]
+        
+        all_cell = [(i, j) for i in range(self.sizen) for j in range(self.sizem)]
+        all_cell.remove((x, y))
+        for caim in [(1, 1), (1, 0), (1, -1), (0, 1),
+                     (-1, -1), (-1, 0), (-1, 1), (0, -1)]:
+            x_next, y_next = x+caim[0], y+caim[1]
+            if x_next in range(self.sizen) \
+            and y_next in range(self.sizem):
+                all_cell.remove((x_next, y_next))
+
+        for i in range(self.mines):
+            mine_cell = random.choice(all_cell)
+            self.field_closed[mine_cell[0]][mine_cell[1]] = 'M'
+            all_cell.remove(mine_cell)
+        
+        #Count number of mines
+        for i in range(self.sizen):
+            for j in range(self.sizem):
+                if self._field_opened[i][j] == 'M':
+                    continue
+                for caim in [(1, 1), (1, 0), (1, -1), (0, 1),
+                             (-1, -1), (-1, 0), (-1, 1), (0, -1)]:
+                    x_next, y_next = i+caim[0], j+caim[1]
+                    if x_next in range(self.sizen) \
+                    and y_next in range(self.sizem):
+                        if self._field_opened[x_next][y_next] == 'M':
+                            self._field_opened[i][j] += 1
+
 
     def print_opened(self):
         """Debug print opened"""

@@ -3,7 +3,7 @@ import sys
 import time
 import threading
 import logging
-from multiprocessing import Queue #@UnresolvedImport
+from multiprocessing import Pipe #@UnresolvedImport
 from MSField import MSField
 from MSButton import MSButton
 from MSBot import MSBot
@@ -14,73 +14,85 @@ class Connectors(QtCore.QObject):
     button_signal = QtCore.Signal(int, int, str)
 
 class Repeater(threading.Thread):
-    def __init__(self, screen, queue, period = 0.1):
+    def __init__(self, screen, period = 0.11):
         threading.Thread.__init__(self)
         self.setName('Repeater')
         self._screen = screen
         self._period = period
         self._run = True
-        self._queue = queue
     
     def run(self):
+        phandler = self._screen._pipe_handler
         logging.info('Started')
         while self._run and self._screen._field.finit <= 0:
             try:
                 self._screen._bot_thread.join()
             except Exception: pass
+            while phandler._wait:
+                time.sleep(self._period)
+
             self._screen._botstep.triggered.emit()
+            
             try:
                 self._screen._bot_thread.join()
             except Exception: pass
-            while not self._queue.empty():
-                time.sleep(self._period / 10)
+            while phandler._wait:
+                time.sleep(self._period)
             time.sleep(self._period)
-            logging.info('Rewind!')
         logging.info('Stopped')
         
     def stop(self):
+        #sys.exit()
         self._run = False
 
-class QueueHandler(threading.Thread):
-    def __init__(self, queue, screen):
+class PipeHandler(threading.Thread):
+    def __init__(self, pipe, screen):
         threading.Thread.__init__(self)
         self.setName('Queue')
-        self._queue = queue
+        self._pipe = pipe
         self._connectors = Connectors()
         self._working = True
         self._screen = screen
+        self._wait = False
     
     def run(self):
+        logging.info('Started')
         while self._working:
-            while not self._queue.empty():
-                ask = self._queue.get()
-                if ask[0] == 'console':
-                    self._connectors.console_signal.emit(ask[1])
-                elif ask[0] == 'pressR':
-                    self._screen._grid.itemAtPosition(ask[1][0], ask[1][1]).widget().right_clicked.emit()
-                elif ask[0] == 'pressL':
-                    self._screen._grid.itemAtPosition(ask[1][0], ask[1][1]).widget().left_clicked.emit()
-                elif ask[0] == 'update':
-                    if ask[1] == 0:
-                        self._screen._mnf += 1
-                        self._screen._val_mnf.setText('Number of m&f: {}'.format(self._screen._mnf))
-                    elif ask[1] == 1:
-                        self._screen._tnc_bp += 1
-                        self._screen._val_tnc_bp.setText('Number of t&c bp: {}'.format(self._screen._tnc_bp)) 
-                    elif ask[1] == 2:
-                        self._screen._tnc_rd += 1
-                        self._screen._val_tnc_rd.setText('Number of t&c rd: {}'.format(self._screen._tnc_rd))
-                    elif ask[1] == 3:
-                        self._screen._rna += 1
-                        self._screen._val_rna.setText('Number of r&a: {}'.format(self._screen._rna))                
-                else:
-                    self._connectors.console_signal.emit('Unknown signal arrived!') 
-            
-            time.sleep(0.1)
+            ask = self._pipe.recv()
+            if ask[0] == 'console':
+                self._connectors.console_signal.emit(ask[1])
+            elif ask[0] == 'pressR':
+                self._screen._grid.itemAtPosition(ask[1][0], ask[1][1]).widget().right_clicked.emit()
+                #self._screen._get_button_action(*ask[1])
+                while self._wait and self._working:
+                    time.sleep(0.01)
+            elif ask[0] == 'pressL':
+                self._screen._grid.itemAtPosition(ask[1][0], ask[1][1]).widget().left_clicked.emit()
+                #self._screen._get_button_toggle(*ask[1])
+                while self._wait and self._working:
+                    time.sleep(0.01)
+            elif ask[0] == 'update':
+                if ask[1] == 0:
+                    self._screen._mnf += 1
+                    self._screen._val_mnf.setText('Number of m&f: {}'.format(self._screen._mnf))
+                elif ask[1] == 1:
+                    self._screen._tnc_bp += 1
+                    self._screen._val_tnc_bp.setText('Number of t&c bp: {}'.format(self._screen._tnc_bp)) 
+                elif ask[1] == 2:
+                    self._screen._tnc_rd += 1
+                    self._screen._val_tnc_rd.setText('Number of t&c rd: {}'.format(self._screen._tnc_rd))
+                elif ask[1] == 3:
+                    self._screen._rna += 1
+                    self._screen._val_rna.setText('Number of r&a: {}'.format(self._screen._rna))                
+            else:
+                self._connectors.console_signal.emit('Unknown signal arrived!') 
+            self._wait = False
+        logging.info('Stopped')
          
     def stop(self): 
-        self._working = False         
-        
+        #sys.exit()
+        self._working = False           
+  
 class MSScreen(QtGui.QMainWindow):  
     def __init__(self):
         """Constructor"""
@@ -135,14 +147,12 @@ class MSScreen(QtGui.QMainWindow):
 
         self.setWindowTitle('Minesweeper')
         self.setWindowIcon(QtGui.QIcon('M.png'))
-        self._queue = Queue()
-        self._queue_handler = QueueHandler(self._queue, self)
-        self._queue_handler._connectors.console_signal.connect(self.console_append, QtCore.Qt.QueuedConnection)
-        self._queue_handler.start()
+        (self._pipe, self._wpipe) = Pipe()
+        self._pipe_handler = PipeHandler(self._pipe, self)
+        self._pipe_handler._connectors.console_signal.connect(self.console_append, QtCore.Qt.QueuedConnection)
+        self._pipe_handler.start()
     
     def set_names(self, i, j, val):
-        if (self._game_finished()): return 
-
         """Set new field names if game is not finished already"""
         if (self._game_finished()): return 
         
@@ -160,12 +170,13 @@ class MSScreen(QtGui.QMainWindow):
             cur_button.setStyleSheet("background-color: white")
 
    
-    def _get_button_action(self):
+    def _get_button_action(self, column=None, row=None):
         """Open cell action"""
         if self._field.finit == 1: return
         call_button = self.sender()
         
-        column, row = self._grid.getItemPosition(self._grid.indexOf(call_button))[0:2]
+        if column == None and row == None: column, row = self._grid.getItemPosition(self._grid.indexOf(call_button))[0:2]
+        logging.info('Started with ({}, {})!'.format(column, row))
         
         if self._field._field_opened[column][row] != 0 and self._field.finit == -1:
             sizen = self._field.sizen
@@ -177,6 +188,8 @@ class MSScreen(QtGui.QMainWindow):
         
         self._field.defuse_cell(column, row)
         
+        self._pipe_handler._wait = False
+        logging.info('Finished with ({}, {})!'.format(column, row))
         if self._field.finit == 2:
             percentage = round(self._field.kill_field()/self._field.sizem/self._field.sizen*100)
             self._field.finit = 1
@@ -196,14 +209,19 @@ class MSScreen(QtGui.QMainWindow):
             ret = msgBox.exec_()
             if (ret == QtGui.QMessageBox.Reset):
                 self._new_field_create(self._field.sizen, self._field.sizem, self._field.mines)
+            logging.info('Game finished with ({}, {})!'.format(column, row))
             return True 
     
-    def _get_button_toggle(self):
+    def _get_button_toggle(self, column=None, row=None):
         """Set flag action"""
         if self._field.finit == 1: return
         call_button = self.sender()
-        column, row = self._grid.getItemPosition(self._grid.indexOf(call_button))[0:2]
+        if column == None and row == None: column, row = self._grid.getItemPosition(self._grid.indexOf(call_button))[0:2]
+        
+        logging.info('Started with ({}, {})!'.format(column, row))
         self._field.mark_cell(column, row)
+        logging.info('Finished with ({}, {})!'.format(column, row))
+        self._pipe_handler._wait = False
     
     def _game_start(self):
         """Difficulty selection"""
@@ -244,6 +262,30 @@ class MSScreen(QtGui.QMainWindow):
         central_widget = QtGui.QWidget()
         self.setCentralWidget(central_widget)
         
+        vbox1 = QtGui.QVBoxLayout()
+  
+        lcd_layout = QtGui.QHBoxLayout()
+        self._lcd_left = QtGui.QLCDNumber()
+        self._lcd_left.setStyleSheet('background-color: black; color:red; border: 1px')
+        self._lcd_left.setFixedSize(self._lcd_left.sizeHint())
+        self._lcd_left.setNumDigits(3)
+        self._lcd_left.display(mines)
+        
+        self._smile = QtGui.QPushButton()
+        self._smile.setStyleSheet('border: 0px')
+        #self._smile.setFixedSize(self.sizeHint())
+        
+        self._lcd_all = QtGui.QLCDNumber()
+        self._lcd_all.setStyleSheet('background-color: black; color:red; border: 1px')
+        self._lcd_all.setFixedSize(self._lcd_all.sizeHint())
+        self._lcd_all.setNumDigits(3)
+        self._lcd_all.display(0)
+        lcd_layout.addWidget(self._lcd_left)
+        lcd_layout.addWidget(self._smile)
+        lcd_layout.addWidget(self._lcd_all)
+        vbox1.addLayout(lcd_layout)  
+
+        
         #Create grid and add buttons
         self._grid = QtGui.QGridLayout()
         self._grid.setSpacing(0)
@@ -255,6 +297,8 @@ class MSScreen(QtGui.QMainWindow):
                 button.left_clicked.connect(self._get_button_toggle)
                 self._grid.addWidget(button, i, j)
                 self.set_names(i, j, 'C')
+        
+        vbox1.addLayout(self._grid)
         
         vbox2 = QtGui.QVBoxLayout()
         self._val_mnf = QtGui.QLabel('Number of m&f: 0')
@@ -279,10 +323,12 @@ class MSScreen(QtGui.QMainWindow):
         self._val_tnc_rd.hide()
         self._val_rna.hide()
         self._autobot.hide()
+        
         #Starting all things
         
         term_layout = QtGui.QHBoxLayout()
-        term_layout.addLayout(self._grid)
+        #term_layout.addLayout(self._grid)
+        term_layout.addLayout(vbox1)
         term_layout.addLayout(vbox2)
     
         central_widget.setLayout(term_layout)
@@ -291,6 +337,10 @@ class MSScreen(QtGui.QMainWindow):
         self.setFixedSize(self.sizeHint()+central_widget.sizeHint())
         self._field.print_opened()        
         self._timer = time.time()
+        
+        try:
+            self._bot_thread.terminate()
+        except Exception: pass
     
     def _bot_start(self):
         """Show all the components of bot and start the game"""
@@ -306,10 +356,9 @@ class MSScreen(QtGui.QMainWindow):
         
         self.centralWidget().setFixedSize(self.centralWidget().sizeHint())
         self.setFixedSize(self.sizeHint())
-        self._bot_thread = MSBot(self, self._queue, self)
-        self._autobot_thread = Repeater(self, self._queue, 0.1)
+        self._bot_thread = MSBot(self, self._wpipe, self)
+        self._autobot_thread = Repeater(self, 0.1)
         self._autobot_thread._run = False
-        
         self._mnf = 0
         self._tnc_bp = 0
         self._tnc_rd = 0
@@ -319,8 +368,12 @@ class MSScreen(QtGui.QMainWindow):
 
     def _bot_step(self):
         """Start bot thread"""
-        if not self._bot_thread.is_alive():
-            self._bot_thread = MSBot(self, self._queue, self)
+        try:
+            if not self._bot_thread.is_alive():
+                self._bot_thread = MSBot(self, self._wpipe, self)
+                self._bot_thread.start()
+        except Exception:
+            self._bot_thread = MSBot(self, self._wpipe, self)
             self._bot_thread.start()
 
     def _game_finished(self):
@@ -356,7 +409,7 @@ class MSScreen(QtGui.QMainWindow):
                 self._autobot_thread.join()
             except Exception: pass
         else:
-            self._autobot_thread = Repeater(self, self._queue)
+            self._autobot_thread = Repeater(self)
             self._autobot_thread.start()
     
     def console_append(self, string):
@@ -382,9 +435,9 @@ def initGame():
     scr.show()
     app.exec_()
     
-    scr._queue_handler.stop()
+    scr._pipe_handler.stop()
     scr._autobot_thread.stop()
-    scr._bot_thread.stop()
+    scr._bot_thread.terminate()
 
 if __name__ == '__main__':
     raise Exception("Can't be executed from main")
