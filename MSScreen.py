@@ -159,7 +159,13 @@ class MSScreen(QtGui.QMainWindow):
         cur_button = self._grid.itemAtPosition(i, j).widget()
         cur_geom = cur_button.geometry()
         icon_size = QtCore.QSize(cur_geom.width()*3/4, cur_geom.height()*3/4)
-                
+        
+        mc = 0
+        for x in range(self._field.sizen):
+            for y in range(self._field.sizem):  
+                if self._field.field_closed[x][y] == 'F': mc += 1
+
+        self._lcd_left.display(self._field.mines - mc)
         if self._field.field_closed[i][j] == 0: #if cell == 0 set no icon+gray color
             cur_button.setIcon(QtGui.QIcon(str('')))
             cur_button.setIconSize(icon_size)
