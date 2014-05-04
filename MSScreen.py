@@ -44,7 +44,6 @@ class Repeater(threading.Thread):
     def stop(self):
         self._run = False
 
-
 class PipeHandler(threading.Thread):
     def __init__(self, pipe, screen):
         threading.Thread.__init__(self)
@@ -210,6 +209,7 @@ class MSScreen(QtGui.QMainWindow):
             if self._field.sizem == 16: state = 1
             if self._field.sizem == 30: state = 2
             sb.add_level(state, 0, percentage)
+            self._lcd_timer_working = False
             
             msgBox = QtGui.QMessageBox()
             msgBox.setWindowIcon(QtGui.QIcon('M.png'))
@@ -278,7 +278,7 @@ class MSScreen(QtGui.QMainWindow):
   
         lcd_layout = QtGui.QHBoxLayout()
         self._lcd_left = QtGui.QLCDNumber()
-        self._lcd_left.setStyleSheet('background-color: black; color:red; border: 1px')
+        self._lcd_left.setStyleSheet('background-color: black; color: red; border: 1px')
         self._lcd_left.setFixedSize(self._lcd_left.sizeHint())
         self._lcd_left.setNumDigits(3)
         self._lcd_left.display(mines)
@@ -290,10 +290,13 @@ class MSScreen(QtGui.QMainWindow):
         #self._smile.setFixedSize(self.sizeHint())
         
         self._lcd_all = QtGui.QLCDNumber()
-        self._lcd_all.setStyleSheet('background-color: black; color:red; border: 1px')
+        self._lcd_all.setStyleSheet('background-color: black; color: red; border: 1px')
         self._lcd_all.setFixedSize(self._lcd_all.sizeHint())
         self._lcd_all.setNumDigits(3)
         self._lcd_all.display(0)
+        self._timer = time.time()
+        self._lcd_timer()
+        
         lcd_layout.addWidget(self._lcd_left)
         lcd_layout.addWidget(self._smile)
         lcd_layout.addWidget(self._lcd_all)
@@ -352,11 +355,21 @@ class MSScreen(QtGui.QMainWindow):
         central_widget.setFixedSize(central_widget.sizeHint())
         self.setFixedSize(self.sizeHint()+central_widget.sizeHint())
         self._field.print_opened()        
-        self._timer = time.time()
         
         try:
             self._bot_thread.terminate()
         except Exception: pass
+    
+    def _lcd_timer(self):
+        self._lcd_timer_working = True
+        def repeat():
+            if self._lcd_timer_working:
+                self._lcd_all.display(round(time.time() - self._timer, 1))
+                self._lcd_timer_thread = threading.Timer(1, repeat)
+                self._lcd_timer_thread.start()
+    
+        self._lcd_timer_thread = threading.Timer(1, repeat)
+        self._lcd_timer_thread.start()
     
     def _bot_start(self):
         """Show all the components of bot and start the game"""
@@ -405,7 +418,7 @@ class MSScreen(QtGui.QMainWindow):
             if self._field.sizem == 16: state = 1
             if self._field.sizem == 30: state = 2
             sb.add_level(state, 1, 100)
-            
+            self._lcd_timer_working = False
             msgBox = QtGui.QMessageBox()
             msgBox.setText("Congratulations! You have succeeded in {} seconds".format(round(time.time() - self._timer, 2)))
             msgBox.setWindowIcon(QtGui.QIcon('M.png'))
@@ -481,6 +494,7 @@ def initGame():
     except Exception: pass
     try: scr._bot_thread.terminate()
     except Exception: pass
+    scr._lcd_timer_working = False
     
 if __name__ == '__main__':
     raise Exception("Can't be executed from main")
