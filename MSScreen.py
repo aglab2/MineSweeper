@@ -42,8 +42,8 @@ class Repeater(threading.Thread):
         logging.info('Stopped')
         
     def stop(self):
-        #sys.exit()
         self._run = False
+
 
 class PipeHandler(threading.Thread):
     def __init__(self, pipe, screen):
@@ -58,7 +58,9 @@ class PipeHandler(threading.Thread):
     def run(self):
         logging.info('Started')
         while self._working:
-            ask = self._pipe.recv()
+            try:
+                ask = self._pipe.recv()
+            except EOFError: break
             if ask[0] == 'console':
                 self._connectors.console_signal.emit(ask[1])
             elif ask[0] == 'pressR':
@@ -179,10 +181,11 @@ class MSScreen(QtGui.QMainWindow):
     def _get_button_action(self, column=None, row=None):
         """Open cell action"""
         if self._field.finit == 1: return
+        
         call_button = self.sender()
         
         if column == None and row == None: column, row = self._grid.getItemPosition(self._grid.indexOf(call_button))[0:2]
-        logging.info('Started with ({}, {})!'.format(column, row))
+        #logging.info('Started with ({}, {})!'.format(column, row))
         
         if self._field._field_opened[column][row] != 0 and self._field.finit == -1:
             sizen = self._field.sizen
@@ -195,8 +198,9 @@ class MSScreen(QtGui.QMainWindow):
         self._field.defuse_cell(column, row)
         
         self._pipe_handler._wait = False
-        logging.info('Finished with ({}, {})!'.format(column, row))
+        #logging.info('Finished with ({}, {})!'.format(column, row))
         if self._field.finit == 2:
+            self._smile.setIcon(QtGui.QIcon('smiley3.ico'))
             percentage = round(self._field.kill_field()/self._field.sizem/self._field.sizen*100)
             self._field.finit = 1
             call_button.setStyleSheet("background-color: red")
@@ -214,19 +218,21 @@ class MSScreen(QtGui.QMainWindow):
             msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Reset)  
             ret = msgBox.exec_()
             if (ret == QtGui.QMessageBox.Reset):
-                self._new_field_create(self._field.sizen, self._field.sizem, self._field.mines)
-            logging.info('Game finished with ({}, {})!'.format(column, row))
+                self._restart()
+                #self._new_field_create(self._field.sizen, self._field.sizem, self._field.mines)
+            #logging.info('Game finished with ({}, {})!'.format(column, row))
             return True 
     
     def _get_button_toggle(self, column=None, row=None):
         """Set flag action"""
         if self._field.finit == 1: return
+        
         call_button = self.sender()
         if column == None and row == None: column, row = self._grid.getItemPosition(self._grid.indexOf(call_button))[0:2]
         
-        logging.info('Started with ({}, {})!'.format(column, row))
+        #logging.info('Started with ({}, {})!'.format(column, row))
         self._field.mark_cell(column, row)
-        logging.info('Finished with ({}, {})!'.format(column, row))
+        #logging.info('Finished with ({}, {})!'.format(column, row))
         self._pipe_handler._wait = False
     
     def _game_start(self):
@@ -279,6 +285,8 @@ class MSScreen(QtGui.QMainWindow):
         
         self._smile = QtGui.QPushButton()
         self._smile.setStyleSheet('border: 0px')
+        self._smile.setIcon(QtGui.QIcon('smiley.ico'))
+        self._smile.clicked.connect(self._restart)
         #self._smile.setFixedSize(self.sizeHint())
         
         self._lcd_all = QtGui.QLCDNumber()
@@ -301,6 +309,8 @@ class MSScreen(QtGui.QMainWindow):
                 button = MSButton()
                 button.right_clicked.connect(self._get_button_action)
                 button.left_clicked.connect(self._get_button_toggle)
+                button.pressed.connect(self._smiley_pressed)
+                button.released.connect(self._smiley_released)
                 self._grid.addWidget(button, i, j)
                 self.set_names(i, j, 'C')
         
@@ -389,6 +399,7 @@ class MSScreen(QtGui.QMainWindow):
         if self._field.is_solved() and self._field.finit != 2:
             self._field.finit = 1 
             
+            self._smile.setIcon(QtGui.QIcon('smiley_ok.ico'))
             sb = MSScoreboard()
             state = 0
             if self._field.sizem == 16: state = 1
@@ -402,10 +413,21 @@ class MSScreen(QtGui.QMainWindow):
             msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Reset)  
             ret = msgBox.exec_()
             if (ret == QtGui.QMessageBox.Reset):
-                self._new_field_create(self._field.sizen, self._field.sizem, self._field.mines)
-                pass
+                self._restart()
+                #self._new_field_create(self._field.sizen, self._field.sizem, self._field.mines)
+                #pass
             return True
         return False
+    
+    def _restart(self):
+        try:
+            self._autobot_thread.stop()
+        except Exception: pass
+        try:
+            self._bot_thread.terminate()
+        except Exception: pass
+        self._new_field_create(self._field.sizen, self._field.sizem, self._field.mines)
+        pass
     
     def _start_autobot(self):
         """In period start botstep"""
@@ -433,6 +455,14 @@ class MSScreen(QtGui.QMainWindow):
         """WIP"""
         self._game_start()
         self._bot_start()
+    
+    def _smiley_pressed(self):
+        if self._field.finit <= 0:
+            self._smile.setIcon(QtGui.QIcon('smiley2.ico'))
+    
+    def _smiley_released(self):
+        if self._field.finit <= 0:
+            self._smile.setIcon(QtGui.QIcon('smiley.ico'))
         
 def initGame():
     """Function to start the game"""
@@ -441,9 +471,16 @@ def initGame():
     scr.show()
     app.exec_()
     
-    scr._pipe_handler.stop()
-    scr._autobot_thread.stop()
-    scr._bot_thread.terminate()
-
+    try: scr._pipe.close() 
+    except Exception: pass
+    try: scr._wpipe.close() 
+    except Exception: pass
+    try: scr._pipe_handler.stop()
+    except Exception: pass
+    try: scr._autobot_thread.stop()
+    except Exception: pass
+    try: scr._bot_thread.terminate()
+    except Exception: pass
+    
 if __name__ == '__main__':
     raise Exception("Can't be executed from main")

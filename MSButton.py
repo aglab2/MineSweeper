@@ -18,9 +18,20 @@ class MSButton(QtGui.QPushButton):
         if   event.button() == QtCore.Qt.LeftButton:
             #logging.info('Left button pressed')
             self.right_clicked.emit()
+            self.pressed.emit()
         elif event.button() == QtCore.Qt.RightButton:
             #logging.info('Right button pressed')
             self.left_clicked.emit()
+            self.pressed.emit()
+    
+    def mouseReleaseEvent(self, event):
+        if   event.button() == QtCore.Qt.LeftButton:
+            #logging.info('Left button pressed')
+            self.released.emit()
+        elif event.button() == QtCore.Qt.RightButton:
+            #logging.info('Right button pressed')
+            self.released.emit()
+    
 
 if __name__ == '__main__':
     raise Exception("Can't be executed from main")
