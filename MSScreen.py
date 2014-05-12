@@ -101,7 +101,10 @@ class MSScreen(QtGui.QMainWindow):
         self._initUI()
         
     def _initUI(self):
-        """Set menubar, name and icons"""
+        """Set menubar, name and icons"""        
+        self._show_new_screen()
+        self.setFixedSize(self.sizeHint())
+
         exitAction = QtGui.QAction('Quit', self)
         exitAction.setShortcut('Ctrl+Q')
         exitAction.setStatusTip('Exit the application')
@@ -110,14 +113,15 @@ class MSScreen(QtGui.QMainWindow):
         startAction = QtGui.QAction('Begin', self)
         startAction.setShortcut('Ctrl+N')
         startAction.setStatusTip('Begin the application')
-        startAction.triggered.connect(self._game_start)
+        startAction.triggered.connect(self._show_new_screen)
         
-        botAction = QtGui.QAction('Bot', self)
+        botAction = QtGui.QAction('Bot', self, enabled = False)
         botAction.setShortcut('Ctrl+B')
         botAction.setStatusTip('Turn on the bot')
         botAction.triggered.connect(self._bot_start)
+        self._botaction = botAction
         
-        botStep = QtGui.QAction('Step', self)
+        botStep = QtGui.QAction('Step', self, enabled = False)
         botStep.setShortcut('Ctrl+S')
         botStep.setStatusTip('Make next bot step')
         botStep.triggered.connect(self._bot_step)
@@ -152,6 +156,83 @@ class MSScreen(QtGui.QMainWindow):
         self._pipe_handler = PipeHandler(self._pipe, self)
         self._pipe_handler._connectors.console_signal.connect(self.console_append, QtCore.Qt.QueuedConnection)
         self._pipe_handler.start()
+    
+    def _show_new_screen(self):
+        grid = QtGui.QGridLayout()
+        rect = QtGui.QDesktopWidget().availableGeometry()
+        height = round(min(rect.width() / 3, rect.height() / 3))
+                
+        button_beginner = QtGui.QPushButton('Beginner\n8x8 field\n10 mines')
+        button_beginner.clicked.connect(self._start_beginner)
+        button_beginner.setFixedSize(height, height)
+        grid.addWidget(button_beginner, 0, 0)
+        
+        button_intermediate = QtGui.QPushButton('Intermediate\n16x16 field\n40 mines')
+        button_intermediate.clicked.connect(self._start_intermediate)
+        button_intermediate.setFixedSize(height, height)
+        grid.addWidget(button_intermediate, 0, 1)
+        
+        button_expert = QtGui.QPushButton('Expert\n16x30 field\n99 mines')
+        button_expert.clicked.connect(self._start_expert)
+        button_expert.setFixedSize(height, height)
+        grid.addWidget(button_expert, 1, 0)
+        
+        button_custom = QtGui.QPushButton('Custom')
+        button_custom.clicked.connect(self._start_custom)
+        button_custom.setFixedSize(height, height)
+        grid.addWidget(button_custom, 1, 1)
+        
+        central_widget = QtGui.QWidget()
+        central_widget.setLayout(grid)
+        self.setCentralWidget(central_widget)
+        self.setFixedSize(self.sizeHint() + central_widget.sizeHint())
+    
+    def _start_beginner(self):
+        self._new_field_create(8, 8, 10)
+    
+    def _start_intermediate(self):
+        self._new_field_create(16, 16, 40)
+    
+    def _start_expert(self):
+        self._new_field_create(16, 30, 99)
+    
+    def _start_custom(self):
+        try:
+            msgBox = QtGui.QMessageBox()
+            msgBox.setWindowIcon(QtGui.QIcon('M.png'))
+            msgBox.setWindowTitle('Minesweeper')
+
+            grid = QtGui.QGridLayout()
+            msgBox_layout = msgBox.layout()
+        
+            label_sizen = QtGui.QLabel('Size X')
+            grid.addWidget(label_sizen, 0, 0)
+            label_sizem = QtGui.QLabel('Size Y')
+            grid.addWidget(label_sizem, 1, 0)
+            label_mines = QtGui.QLabel('Mines')
+            grid.addWidget(label_mines, 2, 0)
+        
+            text_sizen = QtGui.QLineEdit()
+            text_sizen.setValidator(QtGui.QIntValidator(0, 19))
+            grid.addWidget(text_sizen, 0, 1)
+
+            text_sizem = QtGui.QLineEdit()
+            text_sizen.setValidator(QtGui.QIntValidator(0, 31))
+            grid.addWidget(text_sizem, 1, 1)
+
+            text_mines = QtGui.QLineEdit()
+            text_mines.setValidator(QtGui.QIntValidator(0, 19 * 31))    
+            grid.addWidget(text_mines, 2, 1)
+        
+            msgBox_layout.addLayout(grid, 0, 0)
+            msgBox.exec_()
+
+            sizen = int(text_sizen.text())
+            sizem = int(text_sizem.text())
+            mines = int(text_mines.text()) if int(text_mines.text()) < sizen * sizem else sizen * sizem
+
+            self._new_field_create(sizen, sizem, mines)
+        except Exception: pass
     
     def set_names(self, i, j, val):
         """Set new field names if game is not finished already"""
@@ -234,38 +315,7 @@ class MSScreen(QtGui.QMainWindow):
         self._field.mark_cell(column, row)
         #logging.info('Finished with ({}, {})!'.format(column, row))
         self._pipe_handler._wait = False
-    
-    def _game_start(self):
-        """Difficulty selection"""
-        self.__botstate__ = 0
-        msgBox = QtGui.QMessageBox()
-        msgBox.setWindowIcon(QtGui.QIcon('M.png'))
-        msgBox.setWindowTitle('Minesweeper')
         
-        msgBox_layout = msgBox.layout()
-        
-        groupBox = QtGui.QGroupBox("Choose difficulty")
-        radio1 = QtGui.QRadioButton("Beginner")
-        radio2 = QtGui.QRadioButton("Intermediate")
-        radio3 = QtGui.QRadioButton("Professional")
-        radio1.setChecked(True)
-        vbox = QtGui.QVBoxLayout()
-        vbox.addWidget(radio1)
-        vbox.addWidget(radio2)
-        vbox.addWidget(radio3)
-        vbox.addStretch(1)
-        groupBox.setLayout(vbox)
-        msgBox_layout.addWidget(groupBox, 0, 0)
-        msgBox.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel)
-        ret = msgBox.exec_()
-        
-        if (ret == QtGui.QMessageBox.Ok):
-            sizen, sizem, mines = 0, 0, 0
-            if radio1.isChecked(): sizen, sizem, mines = 8, 8, 10
-            if radio2.isChecked(): sizen, sizem, mines = 16, 16, 40
-            if radio3.isChecked(): sizen, sizem, mines = 16, 30, 99
-            self._new_field_create(sizen, sizem, mines)
-    
     def _new_field_create(self, sizen, sizem, mines):
         """Create a new field or replace the old one"""
         self._field = MSField(sizen, sizem, mines, self)
@@ -356,6 +406,8 @@ class MSScreen(QtGui.QMainWindow):
         self.setFixedSize(self.sizeHint()+central_widget.sizeHint())
         self._field.print_opened()        
         
+        self._botaction.setEnabled(True)
+        
         try:
             self._bot_thread.terminate()
         except Exception: pass
@@ -363,10 +415,12 @@ class MSScreen(QtGui.QMainWindow):
     def _lcd_timer(self):
         self._lcd_timer_working = True
         def repeat():
-            if self._lcd_timer_working:
-                self._lcd_all.display(round(time.time() - self._timer, 1))
-                self._lcd_timer_thread = threading.Timer(1, repeat)
-                self._lcd_timer_thread.start()
+            try:
+                if self._lcd_timer_working:
+                    self._lcd_all.display(round(time.time() - self._timer, 1))
+                    self._lcd_timer_thread = threading.Timer(1, repeat)
+                    self._lcd_timer_thread.start()
+            except Exception: pass
     
         self._lcd_timer_thread = threading.Timer(1, repeat)
         self._lcd_timer_thread.start()
@@ -393,6 +447,7 @@ class MSScreen(QtGui.QMainWindow):
         self._tnc_rd = 0
         self._rna = 0
         
+        self._botstep.setEnabled(True)
         #self.__botstate__ = 0
 
     def _bot_step(self):
@@ -414,9 +469,10 @@ class MSScreen(QtGui.QMainWindow):
             
             self._smile.setIcon(QtGui.QIcon('smiley_ok.ico'))
             sb = MSScoreboard()
-            state = 0
-            if self._field.sizem == 16: state = 1
-            if self._field.sizem == 30: state = 2
+            state = -1
+            if self._field.sizem == 8 and self._field.sizen == 8 and self._field.mines == 10: state = 0
+            if self._field.sizem == 16 and self._field.sizen == 16 and self._field.mines == 40: state = 1
+            if self._field.sizem == 16 and self._field.sizen == 30 and self._field.mines == 99: state = 2
             sb.add_level(state, 1, 100)
             self._lcd_timer_working = False
             msgBox = QtGui.QMessageBox()

@@ -1,6 +1,5 @@
 import random
 import copy
-import time
 import logging
 
 from multiprocessing import Process #@UnresolvedImport
@@ -178,7 +177,6 @@ class MSBot(Process):
         if ret:            
             self._pipe.send(('update', 1))
             self._pipe.send(['console', '    Success!'])
-            time.sleep(1)
             return True
         else:
             if found_cells:

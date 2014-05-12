@@ -62,6 +62,7 @@ class MSScoreboard():
 
     def add_level(self, diff, state, per):
         """Recount new data"""
+        if diff == -1: return
         if state == 0:
             self._fail[diff] += 1
         else:
@@ -75,6 +76,8 @@ class MSScoreboard():
     def show_score(self):
         """Just show the scoreboard"""
         msg_box = QtGui.QMessageBox()
+        msg_box.setWindowIcon(QtGui.QIcon('M.png'))
+        msg_box.setWindowTitle('Minesweeper')
         msg_box.setText(
 """Scoreboard:
 Beginners:
