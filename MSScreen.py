@@ -267,12 +267,9 @@ class MSScreen(QtGui.QMainWindow):
         if column == None and row == None: column, row = self._grid.getItemPosition(self._grid.indexOf(call_button))[0:2]
         #logging.info('Started with ({}, {})!'.format(column, row))
         
-        if self._field._field_opened[column][row] != 0 and self._field.finit == -1:
-            sizen = self._field.sizen
-            sizem = self._field.sizem
-            mines = self._field.mines
-            while self._field._field_opened[column][row] != 0:
-                self._field = MSField(sizen, sizem, mines, self)
+        if self._field.finit == -1:
+            self._field.refield(column, row)
+
         self._field.finit = 0
         
         self._field.defuse_cell(column, row)
@@ -404,7 +401,7 @@ class MSScreen(QtGui.QMainWindow):
         
         central_widget.setFixedSize(central_widget.sizeHint())
         self.setFixedSize(self.sizeHint()+central_widget.sizeHint())
-        self._field.print_opened()        
+        #self._field.print_opened()        
         
         self._botaction.setEnabled(True)
         
@@ -417,7 +414,7 @@ class MSScreen(QtGui.QMainWindow):
         def repeat():
             try:
                 if self._lcd_timer_working:
-                    self._lcd_all.display(round(time.time() - self._timer, 1))
+                    self._lcd_all.display(round(time.time() - self._timer, 0))
                     self._lcd_timer_thread = threading.Timer(1, repeat)
                     self._lcd_timer_thread.start()
             except Exception: pass
@@ -462,6 +459,7 @@ class MSScreen(QtGui.QMainWindow):
 
     def _game_finished(self):
         """Check if game finished and finish game if field is solved"""
+        if self._field.finit == -1: return False
         if self._field.finit == 1: return True
             
         if self._field.is_solved() and self._field.finit != 2:
